@@ -533,7 +533,7 @@ export class ConfigurationManager {
 
     // Validate branch prefix (no spaces or special characters that are invalid in git branch names)
     if (config.branchPrefix) {
-      if (/[\s~^:?*\[\\]/.test(config.branchPrefix)) {
+      if (/[\s~^:?*[\\]/.test(config.branchPrefix)) {
         errors.push(
           `Invalid branch-prefix "${config.branchPrefix}": cannot contain spaces or special characters (~^:?*[\\)`
         );

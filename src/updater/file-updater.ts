@@ -179,24 +179,71 @@ export class FileUpdater {
     lines: string[],
     documentIndex: number
   ): { startLine: number; endLine: number } {
-    let currentDoc = 0;
-    let startLine = 0;
-    let endLine = lines.length - 1;
-
+    const separators: number[] = [];
+    
+    // Find all document separators (---)
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-
-      // Document separator
       if (line === '---') {
-        if (currentDoc === documentIndex) {
-          // Found the start of our document
-          startLine = i + 1;
-        } else if (currentDoc === documentIndex + 1) {
-          // Found the start of the next document
-          endLine = i - 1;
-          break;
+        separators.push(i);
+      }
+    }
+
+    // If no separators, entire file is one document
+    if (separators.length === 0) {
+      if (documentIndex === 0) {
+        return { startLine: 0, endLine: lines.length - 1 };
+      } else {
+        throw new Error(`Document index ${documentIndex} out of range (only 1 document)`);
+      }
+    }
+
+    // Calculate document boundaries based on separators
+    // Document 0: starts at line 0 (or after first ---), ends before second ---
+    // Document 1: starts after first ---, ends before second ---
+    // etc.
+    
+    let startLine: number;
+    let endLine: number;
+
+    if (documentIndex === 0) {
+      // First document starts at line 0 or after the first separator
+      // Check if first line is a separator
+      if (separators[0] === 0) {
+        startLine = 1;
+      } else {
+        startLine = 0;
+      }
+      
+      // First document ends before the next separator (if any)
+      if (separators.length > 1) {
+        // Find the next separator after the start
+        const nextSeparatorIndex = separators.findIndex(sep => sep > startLine);
+        if (nextSeparatorIndex !== -1) {
+          endLine = separators[nextSeparatorIndex] - 1;
+        } else {
+          endLine = lines.length - 1;
         }
-        currentDoc++;
+      } else {
+        endLine = lines.length - 1;
+      }
+    } else {
+      // For subsequent documents, find the separator that starts this document
+      // Document N starts after separator at index N-1 or N (depending on whether first line is ---)
+      const separatorIndex = separators[0] === 0 ? documentIndex : documentIndex - 1;
+      
+      if (separatorIndex >= separators.length) {
+        throw new Error(`Document index ${documentIndex} out of range`);
+      }
+      
+      startLine = separators[separatorIndex] + 1;
+      
+      // Find the next separator
+      const nextSeparatorIndex = separatorIndex + 1;
+      if (nextSeparatorIndex < separators.length) {
+        endLine = separators[nextSeparatorIndex] - 1;
+      } else {
+        endLine = lines.length - 1;
       }
     }
 
@@ -229,6 +276,9 @@ export class FileUpdater {
       return -1;
     }
 
+    // Detect the indentation increment used in this file
+    const indentIncrement = this.detectIndentIncrement(lines, startLine, endLine);
+
     let currentIndent = 0;
     let searchStartLine = startLine;
 
@@ -254,9 +304,9 @@ export class FileUpdater {
 
         searchStartLine = foundLine;
         // After finding array element, the next key should be indented more than the dash
-        // The dash itself is at currentIndent, so nested keys are at currentIndent + 2
+        // The dash itself is at currentIndent, so nested keys are at currentIndent + indentIncrement
         const dashIndent = this.getIndentation(lines[foundLine]);
-        currentIndent = dashIndent + 2;
+        currentIndent = dashIndent + indentIncrement;
       } else {
         // Handle object key
         const foundLine = this.findKeyLine(
@@ -278,7 +328,8 @@ export class FileUpdater {
 
         // Otherwise, continue searching from this line
         searchStartLine = foundLine + 1;
-        currentIndent = this.getIndentation(lines[foundLine]) + 2; // Expect nested content to be indented
+        // Expect nested content to be indented by the detected increment
+        currentIndent = this.getIndentation(lines[foundLine]) + indentIncrement;
       }
     }
 
@@ -303,9 +354,19 @@ export class FileUpdater {
     endLine: number,
     expectedIndent: number
   ): number {
+    // Debug logging
+    const debug = false; // Set to true for debugging
+    if (debug) {
+      console.log(`\nSearching for key "${key}" from line ${startLine} to ${endLine}, expected indent: ${expectedIndent}`);
+    }
+    
     for (let i = startLine; i <= endLine; i++) {
       const line = lines[i];
       const indent = this.getIndentation(line);
+
+      if (debug && line.trim().length > 0) {
+        console.log(`  Line ${i} (indent ${indent}): ${line.substring(0, 50)}`);
+      }
 
       // Skip lines with wrong indentation
       if (indent !== expectedIndent) {
@@ -320,10 +381,16 @@ export class FileUpdater {
         `^(['"]?)${this.escapeRegex(key)}\\1:\\s*(.*)$`
       );
       if (keyPattern.test(trimmed)) {
+        if (debug) {
+          console.log(`  Found key "${key}" at line ${i}`);
+        }
         return i;
       }
     }
 
+    if (debug) {
+      console.log(`  Key "${key}" not found`);
+    }
     return -1;
   }
 
@@ -380,6 +447,89 @@ export class FileUpdater {
   private getIndentation(line: string): number {
     const match = line.match(/^(\s*)/);
     return match ? match[1].length : 0;
+  }
+
+  /**
+   * Detects the indentation increment used in a YAML document
+   *
+   * This method analyzes the document to determine how many spaces are used
+   * for each level of indentation (typically 2 or 4 spaces).
+   *
+   * Strategy: Look at the differences between consecutive indentation levels
+   * to find the most common increment.
+   *
+   * @param lines - Array of file lines
+   * @param startLine - Start line of the document
+   * @param endLine - End line of the document
+   * @returns Number of spaces per indentation level (defaults to 2)
+   * @private
+   */
+  private detectIndentIncrement(
+    lines: string[],
+    startLine: number,
+    endLine: number
+  ): number {
+    const indents: number[] = [];
+
+    // Collect indentation levels from non-empty, non-comment lines
+    for (let i = startLine; i <= endLine; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // Skip empty lines and comments
+      if (trimmed.length === 0 || trimmed.startsWith('#')) {
+        continue;
+      }
+
+      const indent = this.getIndentation(line);
+      indents.push(indent);
+    }
+
+    if (indents.length === 0) {
+      return 2; // Default to 2-space indentation
+    }
+
+    // Calculate differences between consecutive indentation levels
+    const increments: number[] = [];
+    for (let i = 1; i < indents.length; i++) {
+      const diff = Math.abs(indents[i] - indents[i - 1]);
+      if (diff > 0) {
+        increments.push(diff);
+      }
+    }
+
+    if (increments.length === 0) {
+      return 2; // Default to 2-space indentation
+    }
+
+    // Find the most common increment
+    const incrementCounts = new Map<number, number>();
+    for (const inc of increments) {
+      incrementCounts.set(inc, (incrementCounts.get(inc) || 0) + 1);
+    }
+
+    // Get the most frequent increment
+    let mostCommonIncrement = 2;
+    let maxCount = 0;
+    for (const [inc, count] of incrementCounts.entries()) {
+      if (count > maxCount) {
+        maxCount = count;
+        mostCommonIncrement = inc;
+      }
+    }
+
+    // If the most common increment is greater than 4, it might be a multiple
+    // Try to find a smaller increment that divides evenly
+    if (mostCommonIncrement > 4) {
+      for (const divisor of [2, 3, 4]) {
+        if (mostCommonIncrement % divisor === 0) {
+          mostCommonIncrement = divisor;
+          break;
+        }
+      }
+    }
+
+    return mostCommonIncrement;
   }
 
   /**

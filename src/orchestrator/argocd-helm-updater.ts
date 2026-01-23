@@ -26,6 +26,7 @@ import { Logger, createLogger } from '../utils/logger';
 import { HelmDependency } from '../types/dependency';
 import { VersionUpdate } from '../types/version';
 import { FileUpdate } from '../types/file-update';
+import { ManifestFile } from '../types/manifest';
 
 /**
  * Main orchestrator class for the ArgoCD Helm Updater
@@ -179,7 +180,7 @@ export class ArgoCDHelmUpdater {
    * @returns Array of discovered manifest files
    * @private
    */
-  private async discoverManifests() {
+  private async discoverManifests(): Promise<ManifestFile[]> {
     const manifests = await this.scanner.scanRepository();
     this.logger.logFilesDiscovered(manifests.length);
     return manifests;

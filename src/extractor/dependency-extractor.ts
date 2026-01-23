@@ -257,11 +257,13 @@ export class DependencyExtractor {
     // Remove protocol if present (http://, https://)
     url = url.replace(/^https?:\/\//, '');
 
+    // Remove any query parameters or fragments FIRST (before splitting)
+    url = url.split('?')[0].split('#')[0];
+
     // Split by / and get the last part
     const parts = url.split('/');
     const lastPart = parts[parts.length - 1];
 
-    // Remove any query parameters or fragments
-    return lastPart.split('?')[0].split('#')[0];
+    return lastPart;
   }
 }
