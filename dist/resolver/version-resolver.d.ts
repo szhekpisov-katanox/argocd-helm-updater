@@ -151,5 +151,21 @@ export declare class VersionResolver {
         helmIndexCacheSize: number;
         ociTagsCacheSize: number;
     };
+    /**
+     * Generates a release notes URL for a chart version
+     *
+     * Attempts to construct release notes URLs based on common patterns:
+     * - Bitnami charts: GitHub releases
+     * - GitHub-hosted charts: GitHub releases
+     * - Other repositories: Falls back to repository URL
+     *
+     * Requirements: 6.5
+     *
+     * @param dependency - The Helm dependency
+     * @param newVersion - The new version
+     * @returns Release notes URL or undefined if not available
+     * @private
+     */
+    private generateReleaseNotesURL;
 }
 //# sourceMappingURL=version-resolver.d.ts.map

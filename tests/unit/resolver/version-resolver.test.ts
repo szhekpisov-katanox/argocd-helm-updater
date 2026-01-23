@@ -14,6 +14,7 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 describe('VersionResolver', () => {
   let config: ActionConfig;
   let mockAxiosInstance: any;
+  let resolver: VersionResolver;
 
   beforeEach(() => {
     // Reset mocks
@@ -3933,6 +3934,117 @@ entries:
 
       const patchGroup = grouped.get('patch-only');
       expect(patchGroup).toHaveLength(2);
+    });
+  });
+
+  describe('Release Notes Generation', () => {
+    beforeEach(() => {
+      resolver = new VersionResolver(config);
+    });
+
+    it('should generate release notes URL for Bitnami charts', () => {
+      const dependency: HelmDependency = {
+        manifestPath: 'test.yaml',
+        documentIndex: 0,
+        chartName: 'nginx',
+        repoURL: 'https://charts.bitnami.com/bitnami',
+        repoType: 'helm',
+        currentVersion: '15.0.0',
+        versionPath: ['spec', 'source', 'targetRevision'],
+      };
+
+      const url = (resolver as any).generateReleaseNotesURL(dependency, '15.10.0');
+      expect(url).toBe('https://github.com/bitnami/charts/releases/tag/nginx-15.10.0');
+    });
+
+    it('should generate release notes URL for GitHub Pages charts', () => {
+      const dependency: HelmDependency = {
+        manifestPath: 'test.yaml',
+        documentIndex: 0,
+        chartName: 'my-chart',
+        repoURL: 'https://myuser.github.io/charts',
+        repoType: 'helm',
+        currentVersion: '1.0.0',
+        versionPath: ['spec', 'source', 'targetRevision'],
+      };
+
+      const url = (resolver as any).generateReleaseNotesURL(dependency, '1.1.0');
+      expect(url).toBe('https://github.com/myuser/charts/releases/tag/my-chart-1.1.0');
+    });
+
+    it('should generate release notes URL for GitHub raw content', () => {
+      const dependency: HelmDependency = {
+        manifestPath: 'test.yaml',
+        documentIndex: 0,
+        chartName: 'my-chart',
+        repoURL: 'https://raw.githubusercontent.com/myorg/myrepo/main/charts',
+        repoType: 'helm',
+        currentVersion: '1.0.0',
+        versionPath: ['spec', 'source', 'targetRevision'],
+      };
+
+      const url = (resolver as any).generateReleaseNotesURL(dependency, '1.1.0');
+      expect(url).toBe('https://github.com/myorg/myrepo/releases/tag/my-chart-1.1.0');
+    });
+
+    it('should generate release notes URL for Docker Hub OCI charts', () => {
+      const dependency: HelmDependency = {
+        manifestPath: 'test.yaml',
+        documentIndex: 0,
+        chartName: 'my-chart',
+        repoURL: 'oci://registry-1.docker.io/myorg/my-chart',
+        repoType: 'oci',
+        currentVersion: '1.0.0',
+        versionPath: ['spec', 'source', 'targetRevision'],
+      };
+
+      const url = (resolver as any).generateReleaseNotesURL(dependency, '1.1.0');
+      expect(url).toBe('https://hub.docker.com/r/myorg/my-chart/tags');
+    });
+
+    it('should generate release notes URL for GHCR OCI charts', () => {
+      const dependency: HelmDependency = {
+        manifestPath: 'test.yaml',
+        documentIndex: 0,
+        chartName: 'my-chart',
+        repoURL: 'oci://ghcr.io/myorg/my-chart',
+        repoType: 'oci',
+        currentVersion: '1.0.0',
+        versionPath: ['spec', 'source', 'targetRevision'],
+      };
+
+      const url = (resolver as any).generateReleaseNotesURL(dependency, '1.1.0');
+      expect(url).toBe('https://github.com/myorg/my-chart/pkgs/container/my-chart');
+    });
+
+    it('should return undefined for unknown repository types', () => {
+      const dependency: HelmDependency = {
+        manifestPath: 'test.yaml',
+        documentIndex: 0,
+        chartName: 'my-chart',
+        repoURL: 'https://unknown-registry.example.com/charts',
+        repoType: 'helm',
+        currentVersion: '1.0.0',
+        versionPath: ['spec', 'source', 'targetRevision'],
+      };
+
+      const url = (resolver as any).generateReleaseNotesURL(dependency, '1.1.0');
+      expect(url).toBeUndefined();
+    });
+
+    it('should return repository URL for unknown OCI registries', () => {
+      const dependency: HelmDependency = {
+        manifestPath: 'test.yaml',
+        documentIndex: 0,
+        chartName: 'my-chart',
+        repoURL: 'oci://custom-registry.example.com/charts/my-chart',
+        repoType: 'oci',
+        currentVersion: '1.0.0',
+        versionPath: ['spec', 'source', 'targetRevision'],
+      };
+
+      const url = (resolver as any).generateReleaseNotesURL(dependency, '1.1.0');
+      expect(url).toBe('oci://custom-registry.example.com/charts/my-chart');
     });
   });
 });

@@ -43869,6 +43869,7 @@ class VersionResolver {
                     dependency: dep,
                     currentVersion: dep.currentVersion,
                     newVersion,
+                    releaseNotes: this.generateReleaseNotesURL(dep, newVersion),
                 });
             }
         }
@@ -44346,6 +44347,82 @@ class VersionResolver {
             helmIndexCacheSize: this.helmIndexCache.size,
             ociTagsCacheSize: this.ociTagsCache.size,
         };
+    }
+    /**
+     * Generates a release notes URL for a chart version
+     *
+     * Attempts to construct release notes URLs based on common patterns:
+     * - Bitnami charts: GitHub releases
+     * - GitHub-hosted charts: GitHub releases
+     * - Other repositories: Falls back to repository URL
+     *
+     * Requirements: 6.5
+     *
+     * @param dependency - The Helm dependency
+     * @param newVersion - The new version
+     * @returns Release notes URL or undefined if not available
+     * @private
+     */
+    generateReleaseNotesURL(dependency, newVersion) {
+        const repoURL = dependency.repoURL;
+        const chartName = dependency.chartName;
+        try {
+            // Bitnami charts (https://charts.bitnami.com/bitnami)
+            if (repoURL.includes('charts.bitnami.com')) {
+                return `https://github.com/bitnami/charts/releases/tag/${chartName}-${newVersion}`;
+            }
+            // GitHub-hosted Helm charts (e.g., https://username.github.io/charts)
+            if (repoURL.includes('github.io')) {
+                // Extract username from URL like https://username.github.io/charts
+                const match = repoURL.match(/https?:\/\/([^.]+)\.github\.io/);
+                if (match) {
+                    const username = match[1];
+                    // Try to construct GitHub releases URL
+                    // This is a best-effort guess - may not always be correct
+                    return `https://github.com/${username}/charts/releases/tag/${chartName}-${newVersion}`;
+                }
+            }
+            // GitHub raw content URLs (e.g., https://raw.githubusercontent.com/org/repo/main/charts)
+            if (repoURL.includes('raw.githubusercontent.com')) {
+                const match = repoURL.match(/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)/);
+                if (match) {
+                    const [, org, repo] = match;
+                    return `https://github.com/${org}/${repo}/releases/tag/${chartName}-${newVersion}`;
+                }
+            }
+            // Artifact Hub - construct link to chart page
+            if (repoURL.includes('artifacthub.io')) {
+                // Artifact Hub URLs vary, but we can link to the chart page
+                return `https://artifacthub.io/packages/helm/${chartName}/${newVersion}`;
+            }
+            // OCI registries - try to construct registry-specific URLs
+            if (dependency.repoType === 'oci') {
+                // Docker Hub
+                if (repoURL.includes('docker.io') || repoURL.includes('registry-1.docker.io')) {
+                    const match = repoURL.match(/(?:oci:\/\/)?(?:registry-1\.)?docker\.io\/([^/]+)\/([^/]+)/);
+                    if (match) {
+                        const [, namespace, image] = match;
+                        return `https://hub.docker.com/r/${namespace}/${image}/tags`;
+                    }
+                }
+                // GitHub Container Registry
+                if (repoURL.includes('ghcr.io')) {
+                    const match = repoURL.match(/(?:oci:\/\/)?ghcr\.io\/([^/]+)\/([^/]+)/);
+                    if (match) {
+                        const [, org, image] = match;
+                        return `https://github.com/${org}/${image}/pkgs/container/${image}`;
+                    }
+                }
+                // For other OCI registries, return the repository URL
+                return repoURL;
+            }
+            // For other repositories, return undefined (no release notes available)
+            return undefined;
+        }
+        catch (error) {
+            // If URL construction fails, return undefined silently
+            return undefined;
+        }
     }
 }
 exports.VersionResolver = VersionResolver;
