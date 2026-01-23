@@ -34,6 +34,21 @@ jobs:
           pr-labels: 'dependencies,argocd,helm'
 ```
 
+## Versioning
+
+This action follows [Semantic Versioning](https://semver.org/). You can reference the action using:
+
+- **Major version** (recommended): `@v1` - Automatically gets the latest v1.x.x release
+- **Specific version**: `@v1.2.3` - Pins to an exact version
+- **Commit SHA**: `@abc123` - Pins to a specific commit (for testing)
+
+Example:
+```yaml
+- uses: yourusername/argocd-helm-updater@v1  # Recommended
+```
+
+For release notes and version history, see [CHANGELOG.md](CHANGELOG.md).
+
 ## Configuration
 
 ### Inputs
@@ -151,10 +166,11 @@ npm run format
 
 ### Testing
 
-The project uses a dual testing approach:
+The project uses a comprehensive testing approach:
 
 - **Unit Tests**: Test specific examples and edge cases
 - **Property-Based Tests**: Verify universal properties with randomized inputs using fast-check
+- **Manual Testing**: Comprehensive testing guide for real-world scenarios
 
 ```bash
 # Run all tests
@@ -167,9 +183,40 @@ npm run test:watch
 npm run test:coverage
 ```
 
+For manual testing, see the [Manual Testing Guide](docs/MANUAL_TESTING_GUIDE.md).
+
+## Testing
+
+### Manual Testing
+
+For comprehensive manual testing guidance, see the [Manual Testing Guide](docs/MANUAL_TESTING_GUIDE.md). This guide includes:
+
+- 53+ test scenarios covering all features
+- Test manifest examples for different ArgoCD structures
+- Expected outcomes and validation steps
+- Troubleshooting guide for common issues
+- Test report template
+
+Quick testing checklist: [Testing Checklist](docs/TESTING_CHECKLIST.md)
+
+### Automated Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
+```
+
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+For information about creating releases, see [Release Process](.github/workflows/RELEASE.md).
 
 ## License
 

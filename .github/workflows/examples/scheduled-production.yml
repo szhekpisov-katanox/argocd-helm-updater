@@ -1,0 +1,343 @@
+name: ArgoCD Helm Updater - Scheduled Production
+
+# This is a production-ready example with scheduled runs,
+# security best practices, and comprehensive monitoring.
+
+on:
+  # Run daily at 6 AM UTC (adjust to your timezone)
+  schedule:
+    - cron: '0 6 * * *'
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
+    inputs:
+      log-level:
+        description: 'Log level for debugging'
+        required: false
+        type: choice
+        options:
+          - info
+          - debug
+          - warn
+          - error
+        default: info
+
+# Ensure only one instance runs at a time
+concurrency:
+  group: argocd-helm-updater
+  cancel-in-progress: false
+
+jobs:
+  update-helm-charts:
+    runs-on: ubuntu-latest
+    
+    # Set a reasonable timeout to prevent hanging workflows
+    timeout-minutes: 30
+    
+    permissions:
+      # Minimal required permissions (security best practice)
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Use a token with appropriate permissions
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Validate repository structure
+        run: |
+          echo "Validating ArgoCD manifests exist..."
+          if ! find . -name "*.yaml" -o -name "*.yml" | grep -q .; then
+            echo "::warning::No YAML files found in repository"
+          fi
+      
+      - name: Update ArgoCD Helm Charts
+        id: update
+        uses: your-org/argocd-helm-updater@v1  # Replace with actual action reference
+        with:
+          # ============================================
+          # Core Configuration
+          # ============================================
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Scan production ArgoCD directories
+          include-paths: |
+            apps/production/**/*.yaml
+            apps/staging/**/*.yaml
+            infrastructure/**/*.yaml
+          
+          exclude-paths: |
+            apps/dev/**
+            apps/local/**
+            **/test/**
+          
+          # ============================================
+          # Update Strategy - Conservative for Production
+          # ============================================
+          # Only allow minor and patch updates by default
+          # Major updates require manual review
+          update-strategy: 'minor'
+          
+          # ============================================
+          # Pull Request Strategy
+          # ============================================
+          # Create separate PRs per chart for easier rollback
+          pr-strategy: 'per-chart'
+          
+          # Comprehensive labeling for automation and filtering
+          pr-labels: |
+            dependencies
+            argocd
+            helm
+            automated
+            production
+          
+          # Assign to platform team lead
+          pr-assignees: 'platform-team-lead'
+          
+          # Request reviews from on-call engineer
+          pr-reviewers: 'on-call-engineer'
+          
+          branch-prefix: 'helm-update'
+          
+          # ============================================
+          # Commit Message - Conventional Commits
+          # ============================================
+          commit-message-prefix: 'chore'
+          commit-message-include-scope: 'true'
+          
+          # ============================================
+          # Dependency Grouping - Logical Grouping
+          # ============================================
+          groups: |
+            {
+              "observability": {
+                "patterns": [
+                  "prometheus",
+                  "grafana",
+                  "loki",
+                  "tempo",
+                  "jaeger"
+                ],
+                "updateTypes": ["minor", "patch"]
+              },
+              "ingress-networking": {
+                "patterns": [
+                  "nginx-ingress",
+                  "cert-manager",
+                  "external-dns"
+                ],
+                "updateTypes": ["patch"]
+              },
+              "databases": {
+                "patterns": [
+                  "postgresql",
+                  "redis",
+                  "mongodb"
+                ],
+                "updateTypes": ["patch"]
+              }
+            }
+          
+          # ============================================
+          # Ignore Rules - Production Safety
+          # ============================================
+          ignore: |
+            [
+              {
+                "dependencyName": "postgresql",
+                "updateTypes": ["major"],
+                "comment": "Major PostgreSQL updates require database migration planning"
+              },
+              {
+                "dependencyName": "redis",
+                "updateTypes": ["major"],
+                "comment": "Major Redis updates may have breaking changes"
+              },
+              {
+                "dependencyName": "nginx-ingress",
+                "versions": ["4.0.0", "4.0.1"],
+                "comment": "Known issues with these versions in production"
+              }
+            ]
+          
+          # ============================================
+          # Auto-Merge - Only for Patch Updates
+          # ============================================
+          # Enable auto-merge for low-risk patch updates
+          auto-merge-enabled: 'true'
+          auto-merge-update-types: 'patch'
+          auto-merge-require-ci-pass: 'true'
+          auto-merge-require-approvals: '1'
+          
+          # ============================================
+          # Rate Limiting - Prevent PR Overload
+          # ============================================
+          # Limit to 3 open PRs to avoid overwhelming reviewers
+          open-pull-requests-limit: '3'
+          
+          # ============================================
+          # Git Strategy
+          # ============================================
+          rebase-strategy: 'auto'
+          
+          # ============================================
+          # Registry Authentication
+          # ============================================
+          registry-credentials: |
+            [
+              {
+                "registry": "https://charts.company.com",
+                "username": "${{ secrets.HELM_REGISTRY_USERNAME }}",
+                "password": "${{ secrets.HELM_REGISTRY_PASSWORD }}"
+              },
+              {
+                "registry": "oci://ghcr.io",
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
+              }
+            ]
+          
+          # ============================================
+          # Logging
+          # ============================================
+          log-level: ${{ inputs.log-level || 'info' }}
+          
+          # Never run in dry-run mode in production workflow
+          dry-run: 'false'
+      
+      # ============================================
+      # Monitoring and Notifications
+      # ============================================
+      
+      - name: Generate Detailed Summary
+        if: always()
+        run: |
+          echo "# 📦 ArgoCD Helm Updater - Production Run" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow**: ${{ github.workflow }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📊 Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Updates Found**: ${{ steps.update.outputs.updates-found }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **PRs Created/Updated**: $(echo '${{ steps.update.outputs.pr-numbers }}' | tr ',' '\n' | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.update.outputs.updates-found }}" -gt "0" ]; then
+            echo "## 🔄 Updated Charts" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            if [ -n "${{ steps.update.outputs.updated-charts }}" ]; then
+              echo '${{ steps.update.outputs.updated-charts }}' | jq -r '.[] | "- **\(.chartName)**: \(.oldVersion) → \(.newVersion)"' >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            echo "## 🔗 Pull Requests" >> $GITHUB_STEP_SUMMARY
+            if [ -n "${{ steps.update.outputs.pr-urls }}" ]; then
+              echo "${{ steps.update.outputs.pr-urls }}" | tr ',' '\n' | while read url; do
+                pr_number=$(echo "$url" | grep -oE '[0-9]+$')
+                echo "- [PR #$pr_number]($url)" >> $GITHUB_STEP_SUMMARY
+              done
+            fi
+          else
+            echo "✅ All Helm charts are up to date!" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Next scheduled run: Tomorrow at 6:00 AM UTC*" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Check for Security Updates
+        if: steps.update.outputs.updates-found > 0
+        run: |
+          echo "::notice::Security review recommended for ${{ steps.update.outputs.updates-found }} chart updates"
+          # Add logic to check if updates include security patches
+          # and flag them for priority review
+      
+      - name: Send Slack Notification on Updates
+        if: success() && steps.update.outputs.updates-found > 0
+        # Replace with your actual Slack notification method
+        run: |
+          echo "📢 Sending notification: ${{ steps.update.outputs.updates-found }} updates found"
+          # Example notification payload:
+          # {
+          #   "text": "🚀 Helm Chart Updates Available",
+          #   "attachments": [{
+          #     "color": "good",
+          #     "fields": [
+          #       {"title": "Updates Found", "value": "${{ steps.update.outputs.updates-found }}", "short": true},
+          #       {"title": "PRs Created", "value": "$(echo '${{ steps.update.outputs.pr-numbers }}' | tr ',' '\n' | wc -l)", "short": true}
+          #     ]
+          #   }]
+          # }
+      
+      - name: Send Alert on Failure
+        if: failure()
+        run: |
+          echo "::error::ArgoCD Helm Updater workflow failed!"
+          echo "::error::Please check the workflow logs and investigate immediately."
+          # Add your alerting logic here (PagerDuty, Slack, email, etc.)
+          # This is critical for production monitoring
+      
+      - name: Record Metrics
+        if: always()
+        run: |
+          # Record metrics for monitoring dashboard
+          echo "Recording workflow metrics..."
+          echo "updates_found=${{ steps.update.outputs.updates-found }}"
+          echo "prs_created=$(echo '${{ steps.update.outputs.pr-numbers }}' | tr ',' '\n' | wc -l)"
+          echo "workflow_status=${{ job.status }}"
+          
+          # Example: Send to monitoring system
+          # curl -X POST https://metrics.company.com/api/v1/metrics \
+          #   -H "Authorization: Bearer ${{ secrets.METRICS_TOKEN }}" \
+          #   -d '{
+          #     "metric": "argocd_helm_updater",
+          #     "value": ${{ steps.update.outputs.updates-found }},
+          #     "tags": {
+          #       "status": "${{ job.status }}",
+          #       "environment": "production"
+          #     }
+          #   }'
+      
+      # ============================================
+      # Cleanup and Maintenance
+      # ============================================
+      
+      - name: Cleanup Old Branches
+        if: always()
+        run: |
+          echo "Checking for stale update branches..."
+          # Delete branches for merged PRs older than 7 days
+          git fetch --prune
+          git branch -r | grep 'origin/helm-update' | while read branch; do
+            branch_name=$(echo "$branch" | sed 's/origin\///')
+            last_commit_date=$(git log -1 --format=%ci "$branch")
+            echo "Branch: $branch_name, Last commit: $last_commit_date"
+            # Add logic to delete old branches if needed
+          done
+      
+      - name: Generate Audit Log
+        if: always()
+        run: |
+          # Create audit log entry for compliance
+          cat << EOF > audit-log-$(date +%Y%m%d-%H%M%S).json
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "workflow": "${{ github.workflow }}",
+            "run_id": "${{ github.run_id }}",
+            "triggered_by": "${{ github.actor }}",
+            "event": "${{ github.event_name }}",
+            "updates_found": "${{ steps.update.outputs.updates-found }}",
+            "prs_created": "${{ steps.update.outputs.pr-numbers }}",
+            "status": "${{ job.status }}"
+          }
+          EOF
+          
+          echo "Audit log created for compliance tracking"
+          # Upload to audit log storage if needed

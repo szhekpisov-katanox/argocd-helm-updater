@@ -1,0 +1,286 @@
+name: ArgoCD Helm Updater - Advanced Configuration
+
+# This example demonstrates all available configuration options
+# for fine-grained control over the update process.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode (no PRs created)'
+        required: false
+        type: boolean
+        default: false
+      
+      update-strategy:
+        description: 'Update strategy to use'
+        required: false
+        type: choice
+        options:
+          - all
+          - major
+          - minor
+          - patch
+        default: minor
+
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  update-helm-charts:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for better git operations
+          fetch-depth: 0
+      
+      - name: Update ArgoCD Helm Charts
+        id: update
+        uses: your-org/argocd-helm-updater@v1  # Replace with actual action reference
+        with:
+          # ============================================
+          # GitHub Configuration
+          # ============================================
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # ============================================
+          # File Scanning Configuration
+          # ============================================
+          # Only scan specific directories
+          include-paths: |
+            apps/**/*.yaml
+            infrastructure/**/*.yaml
+            clusters/**/applications/*.yml
+          
+          # Exclude test and development directories
+          exclude-paths: |
+            apps/dev/**
+            apps/test/**
+            **/templates/**
+            node_modules/**
+          
+          # ============================================
+          # Update Strategy
+          # ============================================
+          # Allow minor and patch updates only (safer for production)
+          update-strategy: ${{ inputs.update-strategy || 'minor' }}
+          
+          # ============================================
+          # Pull Request Configuration
+          # ============================================
+          # Create separate PRs for each chart (easier to review)
+          pr-strategy: 'per-chart'
+          
+          # Add comprehensive labels
+          pr-labels: |
+            dependencies
+            argocd
+            helm
+            automated
+            security-review-required
+          
+          # Assign to platform team
+          pr-assignees: 'platform-team-lead'
+          
+          # Request reviews from team members
+          pr-reviewers: |
+            devops-reviewer-1
+            devops-reviewer-2
+          
+          # Custom branch prefix for organization
+          branch-prefix: 'helm-updates'
+          
+          # ============================================
+          # Commit Message Configuration
+          # ============================================
+          # Use conventional commits format
+          commit-message-prefix: 'chore'
+          commit-message-include-scope: 'true'
+          
+          # ============================================
+          # Dependency Grouping
+          # ============================================
+          # Group related charts into single PRs
+          groups: |
+            {
+              "monitoring-stack": {
+                "patterns": [
+                  "prometheus",
+                  "grafana",
+                  "loki",
+                  "tempo"
+                ],
+                "updateTypes": ["minor", "patch"]
+              },
+              "bitnami-charts": {
+                "patterns": [
+                  "bitnami/*"
+                ],
+                "updateTypes": ["patch"]
+              },
+              "security-critical": {
+                "patterns": [
+                  "cert-manager",
+                  "external-secrets",
+                  "vault"
+                ],
+                "updateTypes": ["all"]
+              }
+            }
+          
+          # ============================================
+          # Ignore Rules
+          # ============================================
+          # Skip specific charts or versions
+          ignore: |
+            [
+              {
+                "dependencyName": "nginx-ingress",
+                "versions": ["4.x"],
+                "comment": "Version 4.x has breaking changes, staying on 3.x"
+              },
+              {
+                "dependencyName": "postgresql",
+                "updateTypes": ["major"],
+                "comment": "Major PostgreSQL updates require manual migration"
+              },
+              {
+                "dependencyName": "redis",
+                "versions": ["7.0.0", "7.0.1"],
+                "comment": "Known issues in these versions"
+              }
+            ]
+          
+          # ============================================
+          # Auto-Merge Configuration
+          # ============================================
+          # Enable auto-merge for patch updates only
+          auto-merge-enabled: 'true'
+          auto-merge-update-types: 'patch'
+          auto-merge-require-ci-pass: 'true'
+          auto-merge-require-approvals: '1'
+          
+          # ============================================
+          # Rate Limiting
+          # ============================================
+          # Limit concurrent open PRs to avoid overwhelming reviewers
+          open-pull-requests-limit: '5'
+          
+          # ============================================
+          # Git Strategy
+          # ============================================
+          # Automatically rebase PRs when base branch changes
+          rebase-strategy: 'auto'
+          
+          # ============================================
+          # Registry Authentication
+          # ============================================
+          # Authenticate to private registries
+          registry-credentials: |
+            [
+              {
+                "registry": "https://charts.example.com",
+                "username": "${{ secrets.HELM_REGISTRY_USERNAME }}",
+                "password": "${{ secrets.HELM_REGISTRY_PASSWORD }}"
+              },
+              {
+                "registry": "oci://ghcr.io",
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
+              },
+              {
+                "registry": "https://harbor.company.com",
+                "username": "${{ secrets.HARBOR_USERNAME }}",
+                "password": "${{ secrets.HARBOR_PASSWORD }}"
+              }
+            ]
+          
+          # ============================================
+          # Behavior Configuration
+          # ============================================
+          # Dry-run mode for testing (can be overridden by workflow input)
+          dry-run: ${{ inputs.dry-run || 'false' }}
+          
+          # Detailed logging for troubleshooting
+          log-level: 'info'
+          
+          # ============================================
+          # External Configuration File
+          # ============================================
+          # Optionally load configuration from file
+          # config-file: '.argocd-updater.yml'
+      
+      # ============================================
+      # Post-Update Actions
+      # ============================================
+      
+      - name: Generate Summary Report
+        if: always()
+        run: |
+          echo "# 📦 ArgoCD Helm Updater Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update Strategy**: ${{ inputs.update-strategy || 'minor' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run**: ${{ inputs.dry-run || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **PR Strategy**: per-chart" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Updates Found**: ${{ steps.update.outputs.updates-found }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ steps.update.outputs.pr-urls }}" ]; then
+            echo "## Pull Requests Created" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.update.outputs.pr-urls }}" | tr ',' '\n' | while read url; do
+              echo "- [$url]($url)" >> $GITHUB_STEP_SUMMARY
+            done
+          else
+            echo "No pull requests were created." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -n "${{ steps.update.outputs.updated-charts }}" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Updated Charts" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            echo '${{ steps.update.outputs.updated-charts }}' | jq '.' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "::error::ArgoCD Helm Updater failed. Check the logs for details."
+          # Add your notification logic here (Slack, email, etc.)
+      
+      - name: Post to Slack
+        if: success() && steps.update.outputs.updates-found > 0
+        # This is a placeholder - replace with your actual Slack notification action
+        run: |
+          echo "Would post to Slack: ${{ steps.update.outputs.updates-found }} updates found"
+          # Example using slackapi/slack-github-action:
+          # uses: slackapi/slack-github-action@v1
+          # with:
+          #   payload: |
+          #     {
+          #       "text": "🚀 ArgoCD Helm Updates Available",
+          #       "blocks": [
+          #         {
+          #           "type": "section",
+          #           "text": {
+          #             "type": "mrkdwn",
+          #             "text": "*${{ steps.update.outputs.updates-found }}* Helm chart updates detected"
+          #           }
+          #         }
+          #       ]
+          #     }
+          # env:
+          #   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,0 +1,50 @@
+name: ArgoCD Helm Updater - Basic Usage
+
+# This is a basic example showing minimal configuration to get started
+# with the ArgoCD Helm Updater action.
+
+on:
+  # Run manually from the Actions tab
+  workflow_dispatch:
+  
+  # Run weekly on Monday at 9 AM UTC
+  schedule:
+    - cron: '0 9 * * 1'
+
+jobs:
+  update-helm-charts:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      # Required for creating pull requests
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Update ArgoCD Helm Charts
+        uses: your-org/argocd-helm-updater@v1  # Replace with actual action reference
+        with:
+          # GitHub token for API access (automatically provided)
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Update strategy: allow all updates (major, minor, patch)
+          update-strategy: 'all'
+          
+          # Add labels to pull requests for easy filtering
+          pr-labels: 'dependencies,argocd,helm'
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### ArgoCD Helm Updater Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Updates found: ${{ steps.update.outputs.updates-found }}" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.update.outputs.pr-urls }}" ]; then
+            echo "Pull requests created:" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.update.outputs.pr-urls }}" | tr ',' '\n' | while read url; do
+              echo "- $url" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
