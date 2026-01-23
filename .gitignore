@@ -4,7 +4,7 @@ package-lock.json
 yarn.lock
 
 # Build output
-dist/
+# Note: dist/ is committed for GitHub Actions
 *.tsbuildinfo
 
 # Test coverage

@@ -50,7 +50,7 @@ export class ArgoCDHelmUpdater {
 
     // Validate configuration
     const validation = ConfigurationManager.validate(this.config);
-    if (!validation.isValid) {
+    if (!validation.valid) {
       throw new Error(`Configuration validation failed:\n${validation.errors.join('\n')}`);
     }
 
@@ -198,13 +198,14 @@ export class ArgoCDHelmUpdater {
     const allDependencies: HelmDependency[] = [];
 
     for (const manifest of manifests) {
-      for (const doc of manifest.documents) {
+      for (let i = 0; i < manifest.documents.length; i++) {
+        const doc = manifest.documents[i];
         let dependencies: HelmDependency[] = [];
 
         if (doc.kind === 'Application') {
-          dependencies = this.extractor.extractFromApplication(doc, manifest.path);
+          dependencies = this.extractor.extractFromApplication(doc, manifest.path, i);
         } else if (doc.kind === 'ApplicationSet') {
-          dependencies = this.extractor.extractFromApplicationSet(doc, manifest.path);
+          dependencies = this.extractor.extractFromApplicationSet(doc, manifest.path, i);
         }
 
         allDependencies.push(...dependencies);
