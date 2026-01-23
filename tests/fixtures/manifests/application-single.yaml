@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx-app
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: nginx
+    targetRevision: 15.9.0
+    helm:
+      releaseName: my-nginx
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default

@@ -1,0 +1,16 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: broken-app
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://charts.bitnami.com/bitnami
+    chart: nginx
+    targetRevision: 15.9.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  invalid:
+    - item1
+   - item2

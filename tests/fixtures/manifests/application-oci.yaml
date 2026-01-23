@@ -1,0 +1,13 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: oci-app
+  namespace: argocd
+spec:
+  source:
+    repoURL: oci://ghcr.io/myorg/charts
+    chart: my-chart
+    targetRevision: 2.0.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default

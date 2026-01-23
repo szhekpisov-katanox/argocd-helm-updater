@@ -1,0 +1,13 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: git-app
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/myorg/myrepo
+    path: manifests
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default

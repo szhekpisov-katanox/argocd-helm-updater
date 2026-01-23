@@ -1,0 +1,153 @@
+name: 'ArgoCD Helm Updater'
+description: 'Automatically detect and update Helm chart versions in ArgoCD Application and ApplicationSet manifests'
+author: 'ArgoCD Helm Updater Contributors'
+
+branding:
+  icon: 'package'
+  color: 'blue'
+
+inputs:
+  # File scanning configuration
+  include-paths:
+    description: 'Glob patterns for files to scan (comma-separated)'
+    required: false
+    default: '**/*.yaml,**/*.yml'
+  
+  exclude-paths:
+    description: 'Glob patterns for files to exclude (comma-separated)'
+    required: false
+    default: 'node_modules/**,dist/**,.git/**'
+  
+  # Update strategy
+  update-strategy:
+    description: 'Update strategy: major, minor, patch, or all'
+    required: false
+    default: 'all'
+  
+  # Helm repository authentication
+  registry-credentials:
+    description: 'JSON array of registry credentials: [{"registry": "url", "username": "user", "password": "pass"}]'
+    required: false
+    default: '[]'
+  
+  # Pull request options
+  pr-strategy:
+    description: 'PR creation strategy: single, per-chart, or per-manifest'
+    required: false
+    default: 'single'
+  
+  pr-labels:
+    description: 'Labels to apply to pull requests (comma-separated)'
+    required: false
+    default: 'dependencies,argocd,helm'
+  
+  pr-assignees:
+    description: 'GitHub usernames to assign to pull requests (comma-separated)'
+    required: false
+    default: ''
+  
+  pr-reviewers:
+    description: 'GitHub usernames to request reviews from (comma-separated)'
+    required: false
+    default: ''
+  
+  branch-prefix:
+    description: 'Prefix for created branches'
+    required: false
+    default: 'argocd-helm-update'
+  
+  # Commit message configuration
+  commit-message-prefix:
+    description: 'Prefix for commit messages (e.g., chore, fix, feat)'
+    required: false
+    default: 'chore'
+  
+  commit-message-include-scope:
+    description: 'Include scope in commit messages (true/false)'
+    required: false
+    default: 'true'
+  
+  # Grouping configuration
+  groups:
+    description: 'JSON object defining dependency groups for batching updates'
+    required: false
+    default: '{}'
+  
+  # Ignore rules
+  ignore:
+    description: 'JSON array of ignore rules: [{"dependencyName": "chart", "versions": ["1.x"], "updateTypes": ["major"]}]'
+    required: false
+    default: '[]'
+  
+  # Auto-merge configuration
+  auto-merge-enabled:
+    description: 'Enable auto-merge for PRs meeting criteria (true/false)'
+    required: false
+    default: 'false'
+  
+  auto-merge-update-types:
+    description: 'Update types eligible for auto-merge (comma-separated: major, minor, patch)'
+    required: false
+    default: 'patch'
+  
+  auto-merge-require-ci-pass:
+    description: 'Require CI to pass before auto-merge (true/false)'
+    required: false
+    default: 'true'
+  
+  auto-merge-require-approvals:
+    description: 'Number of approvals required before auto-merge'
+    required: false
+    default: '0'
+  
+  # Limits
+  open-pull-requests-limit:
+    description: 'Maximum number of open pull requests to create'
+    required: false
+    default: '10'
+  
+  # Rebase strategy
+  rebase-strategy:
+    description: 'Rebase strategy: auto or disabled'
+    required: false
+    default: 'auto'
+  
+  # Behavior
+  dry-run:
+    description: 'Run in dry-run mode (detect updates but do not create PRs)'
+    required: false
+    default: 'false'
+  
+  log-level:
+    description: 'Log level: debug, info, warn, or error'
+    required: false
+    default: 'info'
+  
+  # Configuration file
+  config-file:
+    description: 'Path to external configuration file (.argocd-updater.yml)'
+    required: false
+    default: ''
+  
+  # GitHub token
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  updates-found:
+    description: 'Number of chart updates detected'
+  
+  pr-numbers:
+    description: 'Comma-separated list of created/updated PR numbers'
+  
+  pr-urls:
+    description: 'Comma-separated list of created/updated PR URLs'
+  
+  updated-charts:
+    description: 'JSON array of updated charts with old and new versions'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

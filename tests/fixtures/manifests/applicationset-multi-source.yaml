@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: multi-source-appset
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - cluster: prod
+          - cluster: staging
+  template:
+    metadata:
+      name: '{{cluster}}-app'
+    spec:
+      sources:
+        - repoURL: https://charts.example.com
+          chart: frontend
+          targetRevision: 3.0.0
+        - repoURL: https://charts.example.com
+          chart: backend
+          targetRevision: 2.5.0
+      destination:
+        server: '{{cluster}}'
+        namespace: default
