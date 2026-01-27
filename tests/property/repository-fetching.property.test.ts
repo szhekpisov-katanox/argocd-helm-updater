@@ -88,11 +88,11 @@ const arbOCIDependency = fc.record({
 
 describe('Property 7: Repository Version Fetching', () => {
   let config: ActionConfig;
-  let mockAxiosInstance: any;
 
   beforeEach(() => {
-    // Reset mocks
-    jest.clearAllMocks();
+    // Clear mock call history but keep implementations
+    // Note: Using mockClear() instead of clearAllMocks() to preserve mockImplementationOnce
+    mockedAxios.create.mockClear();
 
     // Create default config
     config = {
@@ -124,22 +124,20 @@ describe('Property 7: Repository Version Fetching', () => {
       githubToken: 'test-token',
     };
 
-    // Mock axios instance
-    mockAxiosInstance = {
+    // Mock axios.create to return a fresh mock instance each time it's called
+    mockedAxios.create.mockImplementation((() => ({
       get: jest.fn(),
       interceptors: {
         request: {
           use: jest.fn(),
         },
       },
-    };
-
-    mockedAxios.create.mockReturnValue(mockAxiosInstance);
+    })) as any);
   });
 
   afterEach(() => {
-    // Ensure mocks are completely reset after each test
-    jest.restoreAllMocks();
+    // Clear mocks after each test (but not between property test iterations)
+    // Note: This is called after each `it()` block, not after each property test iteration
   });
 
   /**
@@ -154,8 +152,8 @@ describe('Property 7: Repository Version Fetching', () => {
         arbHelmDependency,
         fc.array(arbChartVersionInfo, { minLength: 1, maxLength: 20 }),
         async (dependency, chartVersions) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           // Create Helm index YAML
           const helmIndexYAML = `apiVersion: v1
@@ -167,8 +165,18 @@ ${chartVersions.map(v => `    - name: ${dependency.chartName}
       ${v.digest ? `digest: ${v.digest}` : ''}`).join('\n')}
 `;
 
-          mockAxiosInstance.get.mockResolvedValueOnce({
-            data: helmIndexYAML,
+          mockedAxios.create.mockImplementationOnce(() => {
+            mockAxiosInstance = {
+              get: jest.fn().mockResolvedValue({
+                data: helmIndexYAML,
+              }),
+              interceptors: {
+                request: {
+                  use: jest.fn(),
+                },
+              },
+            };
+            return mockAxiosInstance;
           });
 
           const resolver = new VersionResolver(config);
@@ -203,16 +211,26 @@ ${chartVersions.map(v => `    - name: ${dependency.chartName}
         arbOCIDependency,
         fc.array(arbSemVer, { minLength: 1, maxLength: 20 }),
         async (dependency, tags) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           const ociResponse = {
             name: dependency.chartName,
             tags: tags,
           };
 
-          mockAxiosInstance.get.mockResolvedValueOnce({
-            data: ociResponse,
+          mockedAxios.create.mockImplementationOnce(() => {
+            mockAxiosInstance = {
+              get: jest.fn().mockResolvedValue({
+                data: ociResponse,
+              }),
+              interceptors: {
+                request: {
+                  use: jest.fn(),
+                },
+              },
+            };
+            return mockAxiosInstance;
           });
 
           const resolver = new VersionResolver(config);
@@ -250,8 +268,8 @@ ${chartVersions.map(v => `    - name: ${dependency.chartName}
         fc.array(arbChartVersionInfo, { minLength: 1, maxLength: 5 }),
         fc.constantFrom('', '/', '/index.yaml'),
         async (baseURL, chartName, chartVersions, suffix) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           const repoURL = `${baseURL}${suffix}`;
           
@@ -272,13 +290,33 @@ ${chartVersions.map(v => `    - name: ${chartName}
       version: ${v.version}`).join('\n')}
 `;
 
-          // Use mockImplementation to return the correct response for this specific test
-          const expectedIndexURL = baseURL.replace(/\/$/, '') + '/index.yaml';
-          mockAxiosInstance.get.mockImplementation((url: string) => {
-            if (url === expectedIndexURL) {
-              return Promise.resolve({ data: helmIndexYAML });
-            }
-            return Promise.reject(new Error(`Unexpected URL: ${url}`));
+          // Calculate the expected index URL based on how the resolver normalizes URLs
+          // The resolver removes one trailing slash and adds /index.yaml
+          let expectedIndexURL: string;
+          if (repoURL.endsWith('/index.yaml')) {
+            // Already has index.yaml
+            expectedIndexURL = repoURL.replace(/\/$/, '');
+          } else {
+            // Remove one trailing slash and add /index.yaml
+            const normalized = repoURL.replace(/\/$/, '');
+            expectedIndexURL = `${normalized}/index.yaml`;
+          }
+
+          mockedAxios.create.mockImplementationOnce(() => {
+            mockAxiosInstance = {
+              get: jest.fn().mockImplementation((url: string) => {
+                if (url === expectedIndexURL) {
+                  return Promise.resolve({ data: helmIndexYAML });
+                }
+                return Promise.reject(new Error(`Unexpected URL: ${url}`));
+              }),
+              interceptors: {
+                request: {
+                  use: jest.fn(),
+                },
+              },
+            };
+            return mockAxiosInstance;
           });
 
           const resolver = new VersionResolver(config);
@@ -320,8 +358,8 @@ ${chartVersions.map(v => `    - name: ${chartName}
         fc.constantFrom('oci://', ''),
         fc.constantFrom('', '/'),
         async (registry, chartName, tags, prefix, suffix) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           const repoURL = `${prefix}${registry}${suffix}`;
           
@@ -340,13 +378,23 @@ ${chartVersions.map(v => `    - name: ${chartName}
             tags: tags,
           };
 
-          // Use mockImplementation to return the correct response for this specific test
+          // Use mockImplementationOnce to return the correct response for this specific test
           const expectedTagsURL = `https://${registry}/v2/${chartName}/tags/list`;
-          mockAxiosInstance.get.mockImplementation((url: string) => {
-            if (url === expectedTagsURL) {
-              return Promise.resolve({ data: ociResponse });
-            }
-            return Promise.reject(new Error(`Unexpected URL: ${url}`));
+          mockedAxios.create.mockImplementationOnce(() => {
+            mockAxiosInstance = {
+              get: jest.fn().mockImplementation((url: string) => {
+                if (url === expectedTagsURL) {
+                  return Promise.resolve({ data: ociResponse });
+                }
+                return Promise.reject(new Error(`Unexpected URL: ${url}`));
+              }),
+              interceptors: {
+                request: {
+                  use: jest.fn(),
+                },
+              },
+            };
+            return mockAxiosInstance;
           });
 
           const resolver = new VersionResolver(config);
@@ -378,7 +426,7 @@ ${chartVersions.map(v => `    - name: ${chartName}
     const repoURL = 'https://charts.bitnami.com/bitnami';
     const chartNames = ['nginx', 'postgresql'];
     
-    mockAxiosInstance.get.mockReset();
+    let mockAxiosInstance: any;
     
     const dependencies: HelmDependency[] = chartNames.map(chartName => ({
       manifestPath: `apps/${chartName}.yaml`,
@@ -400,8 +448,18 @@ entries:
       version: 1.0.0
 `;
 
-    mockAxiosInstance.get.mockResolvedValueOnce({
-      data: helmIndexYAML,
+    mockedAxios.create.mockImplementationOnce(() => {
+      mockAxiosInstance = {
+        get: jest.fn().mockResolvedValue({
+          data: helmIndexYAML,
+        }),
+        interceptors: {
+          request: {
+            use: jest.fn(),
+          },
+        },
+      };
+      return mockAxiosInstance;
     });
 
     const resolver = new VersionResolver(config);
@@ -430,8 +488,8 @@ entries:
         arbHelmDependency,
         arbChartVersionInfo,
         async (dependency, versionInfo) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           const helmIndexYAML = `apiVersion: v1
 entries:
@@ -442,8 +500,18 @@ entries:
       ${versionInfo.digest ? `digest: ${versionInfo.digest}` : ''}
 `;
 
-          mockAxiosInstance.get.mockResolvedValueOnce({
-            data: helmIndexYAML,
+          mockedAxios.create.mockImplementationOnce(() => {
+            mockAxiosInstance = {
+              get: jest.fn().mockResolvedValue({
+                data: helmIndexYAML,
+              }),
+              interceptors: {
+                request: {
+                  use: jest.fn(),
+                },
+              },
+            };
+            return mockAxiosInstance;
           });
 
           const resolver = new VersionResolver(config);
@@ -482,21 +550,41 @@ entries:
       fc.asyncProperty(
         fc.oneof(arbHelmDependency, arbOCIDependency),
         async (dependency) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           if (dependency.repoType === 'helm') {
             const helmIndexYAML = `apiVersion: v1\nentries:\n  ${dependency.chartName}: []`;
-            mockAxiosInstance.get.mockResolvedValueOnce({
-              data: helmIndexYAML,
+            mockedAxios.create.mockImplementationOnce(() => {
+              mockAxiosInstance = {
+                get: jest.fn().mockResolvedValue({
+                  data: helmIndexYAML,
+                }),
+                interceptors: {
+                  request: {
+                    use: jest.fn(),
+                  },
+                },
+              };
+              return mockAxiosInstance;
             });
           } else {
             const ociResponse = {
               name: dependency.chartName,
               tags: [],
             };
-            mockAxiosInstance.get.mockResolvedValueOnce({
-              data: ociResponse,
+            mockedAxios.create.mockImplementationOnce(() => {
+              mockAxiosInstance = {
+                get: jest.fn().mockResolvedValue({
+                  data: ociResponse,
+                }),
+                interceptors: {
+                  request: {
+                    use: jest.fn(),
+                  },
+                },
+              };
+              return mockAxiosInstance;
             });
           }
 
@@ -527,8 +615,8 @@ entries:
         arbHelmDependency,
         arbChartName,
         async (dependency, otherChartName) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           // Ensure we're looking for a different chart
           if (dependency.chartName === otherChartName) {
@@ -543,8 +631,18 @@ entries:
       version: 1.0.0
 `;
 
-          mockAxiosInstance.get.mockResolvedValueOnce({
-            data: helmIndexYAML,
+          mockedAxios.create.mockImplementationOnce(() => {
+            mockAxiosInstance = {
+              get: jest.fn().mockResolvedValue({
+                data: helmIndexYAML,
+              }),
+              interceptors: {
+                request: {
+                  use: jest.fn(),
+                },
+              },
+            };
+            return mockAxiosInstance;
           });
 
           const resolver = new VersionResolver(config);
@@ -574,8 +672,8 @@ entries:
         fc.oneof(arbHelmDependency, arbOCIDependency),
         fc.array(arbSemVer, { minLength: 1, maxLength: 10 }),
         async (dependency, versions) => {
-          // Reset mock for each property test iteration
-          mockAxiosInstance.get.mockReset();
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
           
           if (dependency.repoType === 'helm') {
             const helmIndexYAML = `apiVersion: v1
@@ -583,16 +681,36 @@ entries:
   ${dependency.chartName}:
 ${versions.map(v => `    - name: ${dependency.chartName}\n      version: ${v}`).join('\n')}
 `;
-            mockAxiosInstance.get.mockResolvedValueOnce({
-              data: helmIndexYAML,
+            mockedAxios.create.mockImplementationOnce(() => {
+              mockAxiosInstance = {
+                get: jest.fn().mockResolvedValue({
+                  data: helmIndexYAML,
+                }),
+                interceptors: {
+                  request: {
+                    use: jest.fn(),
+                  },
+                },
+              };
+              return mockAxiosInstance;
             });
           } else {
             const ociResponse = {
               name: dependency.chartName,
               tags: versions,
             };
-            mockAxiosInstance.get.mockResolvedValueOnce({
-              data: ociResponse,
+            mockedAxios.create.mockImplementationOnce(() => {
+              mockAxiosInstance = {
+                get: jest.fn().mockResolvedValue({
+                  data: ociResponse,
+                }),
+                interceptors: {
+                  request: {
+                    use: jest.fn(),
+                  },
+                },
+              };
+              return mockAxiosInstance;
             });
           }
 
@@ -632,26 +750,59 @@ ${versions.map(v => `    - name: ${dependency.chartName}\n      version: ${v}`).
         async (helmDeps, ociDeps) => {
           const allDeps = [...helmDeps, ...ociDeps];
 
-          // Mock responses for each dependency
-          mockAxiosInstance.get.mockImplementation((url: string) => {
-            if (url.includes('/index.yaml')) {
-              // Helm repository
-              const dep = helmDeps.find(d => url.includes(d.repoURL.replace(/\/$/, '')));
-              if (dep) {
-                return Promise.resolve({
-                  data: `apiVersion: v1\nentries:\n  ${dep.chartName}:\n    - name: ${dep.chartName}\n      version: 1.0.0`,
-                });
-              }
-            } else if (url.includes('/tags/list')) {
-              // OCI registry
-              const dep = ociDeps.find(d => url.includes(d.chartName));
-              if (dep) {
-                return Promise.resolve({
-                  data: { name: dep.chartName, tags: ['1.0.0'] },
-                });
-              }
+          // Capture the mock instance that will be created for this VersionResolver
+          let mockAxiosInstance: any;
+
+          // Group Helm dependencies by repository
+          const helmDepsByRepo = new Map<string, typeof helmDeps>();
+          helmDeps.forEach(dep => {
+            const normalizedRepo = dep.repoURL.replace(/\/$/, '');
+            if (!helmDepsByRepo.has(normalizedRepo)) {
+              helmDepsByRepo.set(normalizedRepo, []);
             }
-            return Promise.reject(new Error('Not found'));
+            helmDepsByRepo.get(normalizedRepo)!.push(dep);
+          });
+
+          // Mock responses for each dependency
+          mockedAxios.create.mockImplementationOnce(() => {
+            mockAxiosInstance = {
+              get: jest.fn().mockImplementation((url: string) => {
+                if (url.includes('/index.yaml')) {
+                  // Helm repository - find which repo this is for
+                  for (const [repoURL, deps] of helmDepsByRepo.entries()) {
+                    if (url.includes(repoURL)) {
+                      // Build index with all charts from this repository
+                      const entries = deps.map(d => 
+                        `  ${d.chartName}:\n    - name: ${d.chartName}\n      version: 1.0.0`
+                      ).join('\n');
+                      return Promise.resolve({
+                        data: `apiVersion: v1\nentries:\n${entries}`,
+                      });
+                    }
+                  }
+                } else if (url.includes('/tags/list')) {
+                  // OCI registry - extract chart name from URL
+                  // URL format: https://registry/v2/{chartName}/tags/list
+                  const match = url.match(/\/v2\/([^/]+)\/tags\/list$/);
+                  if (match) {
+                    const chartName = match[1];
+                    const dep = ociDeps.find(d => d.chartName === chartName);
+                    if (dep) {
+                      return Promise.resolve({
+                        data: { name: dep.chartName, tags: ['1.0.0'] },
+                      });
+                    }
+                  }
+                }
+                return Promise.reject(new Error('Not found'));
+              }),
+              interceptors: {
+                request: {
+                  use: jest.fn(),
+                },
+              },
+            };
+            return mockAxiosInstance;
           });
 
           const resolver = new VersionResolver(config);
