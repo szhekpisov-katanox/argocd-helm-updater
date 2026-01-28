@@ -177,14 +177,57 @@ export class ChangelogFinder {
    */
   async discoverSourceRepository(update: VersionUpdate): Promise<string[]> {
     const urls: string[] = [];
+    const { repoURL, chartName, repoType } = update.dependency;
 
-    // For now, we'll use the repoURL as the source
-    // In a full implementation, this would fetch Chart.yaml and extract source URLs
-    // from the chart metadata
-    const { repoURL } = update.dependency;
-    
-    if (repoURL) {
-      urls.push(repoURL);
+    try {
+      if (repoType === 'helm') {
+        // For Helm repositories, try common patterns
+        // Most Bitnami charts have their source on GitHub
+        if (repoURL.includes('bitnami')) {
+          urls.push(`https://github.com/bitnami/charts`);
+          urls.push(`https://github.com/bitnami/${chartName}`);
+        }
+        
+        // Try to infer from repo URL structure
+        const urlMatch = repoURL.match(/https?:\/\/([^\/]+)/);
+        if (urlMatch) {
+          const domain = urlMatch[1];
+          // Common patterns for chart repositories
+          if (domain.includes('github')) {
+            const githubMatch = repoURL.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+            if (githubMatch) {
+              urls.push(`https://github.com/${githubMatch[1]}/${githubMatch[2]}`);
+            }
+          }
+        }
+      } else if (repoType === 'oci') {
+        // For OCI registries, try to infer source from registry URL
+        if (repoURL.includes('ghcr.io')) {
+          // GitHub Container Registry - try to find corresponding GitHub repo
+          const match = repoURL.match(/ghcr\.io\/([^\/]+)\/([^\/]+)/);
+          if (match) {
+            urls.push(`https://github.com/${match[1]}/${match[2]}`);
+            urls.push(`https://github.com/${match[1]}/charts`);
+          }
+        } else if (repoURL.includes('registry-1.docker.io/bitnamicharts')) {
+          // Bitnami OCI registry
+          urls.push(`https://github.com/bitnami/charts`);
+          urls.push(`https://github.com/bitnami/${chartName}`);
+        }
+      }
+      
+      // Fallback: if no URLs were discovered, use the repoURL itself
+      // This allows the system to at least try the provided URL
+      if (urls.length === 0 && repoURL) {
+        urls.push(repoURL);
+      }
+    } catch (error) {
+      // Log error but continue with fallback
+      console.warn(`Failed to discover source repository for ${chartName}: ${error}`);
+      // Ensure we always return at least the repoURL
+      if (urls.length === 0 && repoURL) {
+        urls.push(repoURL);
+      }
     }
 
     return urls;

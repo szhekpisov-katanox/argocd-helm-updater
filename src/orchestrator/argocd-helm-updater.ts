@@ -22,6 +22,7 @@ import { VersionResolver } from '../resolver/version-resolver';
 import { FileUpdater } from '../updater/file-updater';
 import { PullRequestManager } from '../pr/pull-request-manager';
 import { ChangelogFinder } from '../changelog/changelog-finder';
+import { VersionPruner } from '../changelog/version-pruner';
 import { ActionConfig } from '../types/config';
 import { Logger, createLogger } from '../utils/logger';
 import { HelmDependency } from '../types/dependency';
@@ -366,6 +367,33 @@ export class ArgoCDHelmUpdater {
       try {
         this.logger.debug(`Fetching changelog for ${chartName}`);
         const result = await this.changelogFinder.findChangelog(update);
+        
+        // Prune changelog to relevant version range (Requirement 4.1, 4.2)
+        if (result.found && result.changelogText) {
+          try {
+            const pruneResult = VersionPruner.prune({
+              changelogText: result.changelogText,
+              currentVersion: update.currentVersion,
+              targetVersion: update.newVersion,
+            });
+            
+            // Use pruned changelog if successful, otherwise use full changelog
+            if (pruneResult.versionsFound && pruneResult.prunedText) {
+              result.changelogText = pruneResult.prunedText;
+              this.logger.debug(`Pruned changelog for ${chartName} (${update.currentVersion} → ${update.newVersion})`);
+            } else if (pruneResult.warning) {
+              this.logger.debug(`Using full changelog for ${chartName}: ${pruneResult.warning}`);
+            }
+          } catch (pruneError) {
+            // If pruning fails, use full changelog (non-blocking)
+            this.logger.debug(
+              `Failed to prune changelog for ${chartName}, using full changelog: ${
+                pruneError instanceof Error ? pruneError.message : String(pruneError)
+              }`
+            );
+          }
+        }
+        
         changelogResults.set(chartName, result);
 
         if (result.found) {
