@@ -181,24 +181,35 @@ export class ChangelogFinder {
 
     try {
       if (repoType === 'helm') {
-        // For Helm repositories, try common patterns
-        // Most Bitnami charts have their source on GitHub
+        // Handle GitHub Pages URLs (*.github.io)
+        // These are commonly used for hosting Helm charts from GitHub repos
+        const githubPagesMatch = repoURL.match(/https?:\/\/([^.]+)\.github\.io\/([^\/]+)/);
+        if (githubPagesMatch) {
+          const org = githubPagesMatch[1];
+          const repo = githubPagesMatch[2];
+          // Try the repository that hosts the charts
+          urls.push(`https://github.com/${org}/${repo}`);
+          // Also try common variations
+          urls.push(`https://github.com/${org}/charts`);
+          urls.push(`https://github.com/${org}/helm-charts`);
+        }
+        
+        // Handle Bitnami charts specifically
         if (repoURL.includes('bitnami')) {
           urls.push(`https://github.com/bitnami/charts`);
           urls.push(`https://github.com/bitnami/${chartName}`);
         }
         
-        // Try to infer from repo URL structure
-        const urlMatch = repoURL.match(/https?:\/\/([^\/]+)/);
-        if (urlMatch) {
-          const domain = urlMatch[1];
-          // Common patterns for chart repositories
-          if (domain.includes('github')) {
-            const githubMatch = repoURL.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-            if (githubMatch) {
-              urls.push(`https://github.com/${githubMatch[1]}/${githubMatch[2]}`);
-            }
-          }
+        // Handle direct GitHub URLs
+        const githubMatch = repoURL.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        if (githubMatch) {
+          urls.push(`https://github.com/${githubMatch[1]}/${githubMatch[2]}`);
+        }
+        
+        // Handle raw.githubusercontent.com URLs
+        const rawGithubMatch = repoURL.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)/);
+        if (rawGithubMatch) {
+          urls.push(`https://github.com/${rawGithubMatch[1]}/${rawGithubMatch[2]}`);
         }
       } else if (repoType === 'oci') {
         // For OCI registries, try to infer source from registry URL

@@ -149,6 +149,16 @@ export interface ExternalConfig {
     'rebase-strategy'?: 'auto' | 'disabled';
     'dry-run'?: boolean;
     'log-level'?: 'debug' | 'info' | 'warn' | 'error';
+    changelog?: {
+        enabled?: boolean;
+        'max-length'?: number;
+        'cache-ttl'?: number;
+        'gitlab-token'?: string;
+        'bitbucket-credentials'?: {
+            username: string;
+            password: string;
+        };
+    };
 }
 /**
  * Validation result

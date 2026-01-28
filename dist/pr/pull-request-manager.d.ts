@@ -12,6 +12,7 @@
 import * as github from '@actions/github';
 import { ActionConfig } from '../types/config';
 import { FileUpdate } from '../types/file-update';
+import { ChangelogResult } from '../types/changelog';
 /**
  * Options for creating or updating a pull request
  */
@@ -141,13 +142,15 @@ export declare class PullRequestManager {
      * - Table of chart updates grouped by manifest file
      * - Links to chart repositories
      * - Links to release notes when available
+     * - Changelog sections for each updated chart (if provided)
      *
-     * Requirements: 6.3, 6.4, 6.5
+     * Requirements: 6.3, 6.4, 6.5, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 9.1
      *
      * @param fileUpdates - List of file updates
+     * @param changelogResults - Optional map of chart names to changelog results
      * @returns Formatted PR body in Markdown
      */
-    generatePRBody(fileUpdates: FileUpdate[]): string;
+    generatePRBody(fileUpdates: FileUpdate[], changelogResults?: Map<string, ChangelogResult>): string;
     /**
      * Formats a repository URL into a readable name
      *

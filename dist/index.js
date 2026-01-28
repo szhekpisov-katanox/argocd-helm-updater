@@ -41635,6 +41635,1467 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 5947:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Changelog cache implementation with TTL support
+ *
+ * Validates Requirements:
+ * - 7.1: Cache changelog file contents keyed by repository URL and version
+ * - 7.2: Cache release notes keyed by repository URL and version
+ * - 7.3: Respect cache expiration times to ensure freshness
+ * - 7.4: Return cached result when entry exists and is not expired
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChangelogCache = void 0;
+/**
+ * In-memory cache for changelog results with TTL support
+ */
+class ChangelogCache {
+    cache;
+    constructor() {
+        this.cache = new Map();
+    }
+    /**
+     * Generates a cache key from repository URL and version
+     *
+     * @param repoUrl - Repository URL
+     * @param version - Version string
+     * @returns Cache key in format: `${repoUrl}:${version}`
+     */
+    generateKey(repoUrl, version) {
+        return `${repoUrl}:${version}`;
+    }
+    /**
+     * Checks if a cache entry is expired
+     *
+     * @param entry - Cache entry to check
+     * @returns true if the entry is expired, false otherwise
+     */
+    isExpired(entry) {
+        const now = Date.now();
+        const ageInSeconds = (now - entry.timestamp) / 1000;
+        return ageInSeconds > entry.ttl;
+    }
+    /**
+     * Gets a cached changelog result if it exists and is not expired
+     *
+     * Validates Requirements 7.1, 7.2, 7.4:
+     * - Returns cached result when entry exists and is not expired
+     * - Returns null if entry doesn't exist or is expired
+     *
+     * @param repoUrl - Repository URL
+     * @param version - Version string
+     * @returns Cached ChangelogResult or null if not found or expired
+     */
+    get(repoUrl, version) {
+        const key = this.generateKey(repoUrl, version);
+        const entry = this.cache.get(key);
+        if (!entry) {
+            return null;
+        }
+        // Check if entry is expired (Requirement 7.3)
+        if (this.isExpired(entry)) {
+            // Remove expired entry
+            this.cache.delete(key);
+            return null;
+        }
+        return entry.value;
+    }
+    /**
+     * Sets a changelog result in the cache with TTL
+     *
+     * Validates Requirements 7.1, 7.2:
+     * - Caches changelog results keyed by repository URL and version
+     * - Records timestamp for TTL checking
+     *
+     * @param repoUrl - Repository URL
+     * @param version - Version string
+     * @param value - ChangelogResult to cache
+     * @param ttl - Time-to-live in seconds
+     */
+    set(repoUrl, version, value, ttl) {
+        const key = this.generateKey(repoUrl, version);
+        const entry = {
+            value,
+            timestamp: Date.now(),
+            ttl,
+        };
+        this.cache.set(key, entry);
+    }
+    /**
+     * Clears all entries from the cache
+     *
+     * Validates Requirement 7.7:
+     * - Provides mechanism to clear the cache when needed
+     */
+    clear() {
+        this.cache.clear();
+    }
+    /**
+     * Gets the number of entries in the cache (for testing/debugging)
+     *
+     * @returns Number of cache entries
+     */
+    size() {
+        return this.cache.size;
+    }
+}
+exports.ChangelogCache = ChangelogCache;
+
+
+/***/ }),
+
+/***/ 2897:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * ChangelogFinder - Discovers and retrieves changelog files and release notes
+ *
+ * Validates Requirements:
+ * - 1.1: Attempt to locate changelog files in chart's source repository
+ * - 1.5: Use source URL from Chart.yaml to locate repository
+ * - 1.6: Attempt each source URL until changelog is found
+ * - 3.1, 3.2, 3.3: Query releases API for GitHub/GitLab
+ * - 3.4: Include both changelog and release notes when available
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChangelogFinder = void 0;
+const github = __importStar(__nccwpck_require__(3228));
+const changelog_cache_1 = __nccwpck_require__(5947);
+const repository_parser_1 = __nccwpck_require__(8370);
+const github_client_1 = __nccwpck_require__(536);
+const gitlab_client_1 = __nccwpck_require__(7728);
+const bitbucket_client_1 = __nccwpck_require__(3910);
+/**
+ * Standard changelog file names to search for (in priority order)
+ * Requirement 1.2: Check for changelog files using standard naming conventions
+ * Requirement 1.4: Prioritize CHANGELOG > HISTORY > RELEASES > NEWS
+ */
+const CHANGELOG_FILENAMES = [
+    // CHANGELOG (highest priority)
+    'CHANGELOG.md',
+    'CHANGELOG.rst',
+    'CHANGELOG.txt',
+    'CHANGELOG',
+    'changelog.md',
+    'changelog.rst',
+    'changelog.txt',
+    'changelog',
+    // HISTORY
+    'HISTORY.md',
+    'HISTORY.rst',
+    'HISTORY.txt',
+    'HISTORY',
+    'history.md',
+    'history.rst',
+    'history.txt',
+    'history',
+    // RELEASES
+    'RELEASES.md',
+    'RELEASES.rst',
+    'RELEASES.txt',
+    'RELEASES',
+    'releases.md',
+    'releases.rst',
+    'releases.txt',
+    'releases',
+    // NEWS (lowest priority)
+    'NEWS.md',
+    'NEWS.rst',
+    'NEWS.txt',
+    'NEWS',
+    'news.md',
+    'news.rst',
+    'news.txt',
+    'news',
+];
+/**
+ * ChangelogFinder discovers and retrieves changelog files and release notes
+ * from chart source repositories
+ */
+class ChangelogFinder {
+    options;
+    cache;
+    githubClient;
+    /**
+     * Creates a new ChangelogFinder instance
+     * @param options - Configuration options
+     */
+    constructor(options = {}) {
+        this.options = {
+            cacheTTL: 3600,
+            enableCache: true,
+            ...options,
+        };
+        this.cache = new changelog_cache_1.ChangelogCache();
+        // Initialize GitHub client if token provided
+        if (this.options.githubToken) {
+            this.githubClient = github.getOctokit(this.options.githubToken);
+        }
+    }
+    /**
+     * Finds changelog and release notes for a version update
+     *
+     * Validates Requirements:
+     * - 1.1: Attempt to locate changelog files
+     * - 1.6: Attempt each source URL until changelog is found
+     * - 3.4: Include both changelog and release notes
+     *
+     * @param update - Version update information
+     * @returns ChangelogResult with discovered content
+     */
+    async findChangelog(update) {
+        const { dependency, newVersion } = update;
+        const { repoURL, chartName } = dependency;
+        // Check cache first (Requirement 7.4)
+        if (this.options.enableCache) {
+            const cached = this.cache.get(repoURL, newVersion);
+            if (cached) {
+                return cached;
+            }
+        }
+        // Discover source repository URLs
+        const sourceUrls = await this.discoverSourceRepository(update);
+        // Try each source URL until we find a changelog
+        for (const sourceUrl of sourceUrls) {
+            try {
+                const result = await this.findChangelogFromUrl(sourceUrl, newVersion, chartName);
+                if (result.found) {
+                    // Cache the result (Requirement 7.1, 7.2)
+                    if (this.options.enableCache) {
+                        this.cache.set(repoURL, newVersion, result, this.options.cacheTTL);
+                    }
+                    return result;
+                }
+            }
+            catch (error) {
+                // Continue to next URL on error
+                continue;
+            }
+        }
+        // No changelog found - cache negative result (Requirement 7.6)
+        const negativeResult = {
+            sourceUrl: sourceUrls[0] || repoURL,
+            found: false,
+            error: 'Changelog not found',
+        };
+        if (this.options.enableCache) {
+            this.cache.set(repoURL, newVersion, negativeResult, this.options.cacheTTL);
+        }
+        return negativeResult;
+    }
+    /**
+     * Discovers source repository URLs from chart metadata
+     *
+     * Validates Requirement 1.5: Use source URL from Chart.yaml
+     * Validates Requirement 1.6: Return multiple URLs to try
+     *
+     * @param update - Version update information
+     * @returns Array of source URLs to try (in priority order)
+     */
+    async discoverSourceRepository(update) {
+        const urls = [];
+        const { repoURL, chartName, repoType } = update.dependency;
+        try {
+            if (repoType === 'helm') {
+                // Handle GitHub Pages URLs (*.github.io)
+                // These are commonly used for hosting Helm charts from GitHub repos
+                const githubPagesMatch = repoURL.match(/https?:\/\/([^.]+)\.github\.io\/([^\/]+)/);
+                if (githubPagesMatch) {
+                    const org = githubPagesMatch[1];
+                    const repo = githubPagesMatch[2];
+                    // Try the repository that hosts the charts
+                    urls.push(`https://github.com/${org}/${repo}`);
+                    // Also try common variations
+                    urls.push(`https://github.com/${org}/charts`);
+                    urls.push(`https://github.com/${org}/helm-charts`);
+                }
+                // Handle Bitnami charts specifically
+                if (repoURL.includes('bitnami')) {
+                    urls.push(`https://github.com/bitnami/charts`);
+                    urls.push(`https://github.com/bitnami/${chartName}`);
+                }
+                // Handle direct GitHub URLs
+                const githubMatch = repoURL.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+                if (githubMatch) {
+                    urls.push(`https://github.com/${githubMatch[1]}/${githubMatch[2]}`);
+                }
+                // Handle raw.githubusercontent.com URLs
+                const rawGithubMatch = repoURL.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)/);
+                if (rawGithubMatch) {
+                    urls.push(`https://github.com/${rawGithubMatch[1]}/${rawGithubMatch[2]}`);
+                }
+            }
+            else if (repoType === 'oci') {
+                // For OCI registries, try to infer source from registry URL
+                if (repoURL.includes('ghcr.io')) {
+                    // GitHub Container Registry - try to find corresponding GitHub repo
+                    const match = repoURL.match(/ghcr\.io\/([^\/]+)\/([^\/]+)/);
+                    if (match) {
+                        urls.push(`https://github.com/${match[1]}/${match[2]}`);
+                        urls.push(`https://github.com/${match[1]}/charts`);
+                    }
+                }
+                else if (repoURL.includes('registry-1.docker.io/bitnamicharts')) {
+                    // Bitnami OCI registry
+                    urls.push(`https://github.com/bitnami/charts`);
+                    urls.push(`https://github.com/bitnami/${chartName}`);
+                }
+            }
+            // Fallback: if no URLs were discovered, use the repoURL itself
+            // This allows the system to at least try the provided URL
+            if (urls.length === 0 && repoURL) {
+                urls.push(repoURL);
+            }
+        }
+        catch (error) {
+            // Log error but continue with fallback
+            console.warn(`Failed to discover source repository for ${chartName}: ${error}`);
+            // Ensure we always return at least the repoURL
+            if (urls.length === 0 && repoURL) {
+                urls.push(repoURL);
+            }
+        }
+        return urls;
+    }
+    /**
+     * Finds changelog and release notes from a specific repository URL
+     *
+     * @param sourceUrl - Repository URL
+     * @param version - Version to find changelog for
+     * @param chartName - Chart name (for tag matching)
+     * @returns ChangelogResult
+     */
+    async findChangelogFromUrl(sourceUrl, version, chartName) {
+        // Parse repository URL to determine platform
+        const repoInfo = (0, repository_parser_1.parseRepositoryUrl)(sourceUrl);
+        if (repoInfo.platform === 'unknown') {
+            return {
+                sourceUrl,
+                found: false,
+                error: 'Unknown repository platform',
+            };
+        }
+        // Create platform-specific client
+        const client = this.createClient(repoInfo.platform, repoInfo.owner, repoInfo.repo);
+        if (!client) {
+            return {
+                sourceUrl,
+                found: false,
+                error: `No client available for ${repoInfo.platform}`,
+            };
+        }
+        // Find changelog file and release notes in parallel
+        const [changelogFile, releaseNotes] = await Promise.all([
+            this.findChangelogFile(client, sourceUrl),
+            this.findReleaseNotes(client, version, chartName, sourceUrl),
+        ]);
+        // Combine results
+        const result = {
+            sourceUrl,
+            found: !!(changelogFile || releaseNotes),
+        };
+        if (changelogFile) {
+            result.changelogText = changelogFile.text;
+            result.changelogUrl = changelogFile.url;
+        }
+        if (releaseNotes) {
+            result.releaseNotes = releaseNotes.text;
+            result.releaseNotesUrl = releaseNotes.url;
+        }
+        return result;
+    }
+    /**
+     * Finds a changelog file in the repository
+     *
+     * Validates Requirements:
+     * - 1.2: Check for changelog files using standard naming conventions
+     * - 1.3: Check both case-sensitive and case-insensitive variations
+     * - 1.4: Prioritize CHANGELOG > HISTORY > RELEASES > NEWS
+     *
+     * @param client - Repository client
+     * @param sourceUrl - Repository URL (for constructing file URLs)
+     * @returns Changelog text and URL, or null if not found
+     */
+    async findChangelogFile(client, sourceUrl) {
+        try {
+            // List files in repository root
+            const files = await client.listFiles();
+            const fileNames = files.map(f => f.name);
+            // Try each changelog filename in priority order
+            for (const filename of CHANGELOG_FILENAMES) {
+                if (fileNames.includes(filename)) {
+                    try {
+                        const content = await client.getFileContent(filename);
+                        const url = `${sourceUrl}/blob/main/${filename}`;
+                        return {
+                            text: content,
+                            url,
+                        };
+                    }
+                    catch (error) {
+                        // Continue to next filename if this one fails
+                        continue;
+                    }
+                }
+            }
+            return null;
+        }
+        catch (error) {
+            // Return null on any error (Requirement 6.1: log warning and continue)
+            return null;
+        }
+    }
+    /**
+     * Finds release notes for a specific version
+     *
+     * Validates Requirements:
+     * - 3.1: Query GitHub Releases API
+     * - 3.2: Query GitLab Releases API
+     * - 3.5: Continue processing if release notes not available
+     * - 3.6: Match release tags using common formats
+     *
+     * @param client - Repository client
+     * @param version - Version string
+     * @param chartName - Chart name (for tag matching)
+     * @param sourceUrl - Repository URL (for constructing release URLs)
+     * @returns Release notes text and URL, or null if not found
+     */
+    async findReleaseNotes(client, version, _chartName, _sourceUrl) {
+        try {
+            const result = await client.getReleaseNotes(version);
+            if (result) {
+                return {
+                    text: result.body,
+                    url: result.url,
+                };
+            }
+            return null;
+        }
+        catch (error) {
+            // Return null on any error (Requirement 3.5: graceful handling)
+            return null;
+        }
+    }
+    /**
+     * Creates a platform-specific repository client
+     *
+     * Validates Requirement 2.5, 2.6, 2.7: Use appropriate API for each platform
+     *
+     * @param platform - Repository platform
+     * @param owner - Repository owner
+     * @param repo - Repository name
+     * @returns Repository client or null if not available
+     */
+    createClient(platform, owner, repo) {
+        switch (platform) {
+            case 'github':
+                if (this.githubClient) {
+                    return new github_client_1.GitHubClient(this.githubClient, owner, repo);
+                }
+                return null;
+            case 'gitlab':
+                if (this.options.gitlabToken) {
+                    const projectId = `${owner}/${repo}`;
+                    return new gitlab_client_1.GitLabClient(this.options.gitlabToken, projectId);
+                }
+                return null;
+            case 'bitbucket':
+                if (this.options.bitbucketCredentials) {
+                    return new bitbucket_client_1.BitbucketClient(this.options.bitbucketCredentials, owner, repo);
+                }
+                return null;
+            default:
+                return null;
+        }
+    }
+    /**
+     * Clears the cache
+     *
+     * Validates Requirement 7.7: Provide mechanism to clear cache
+     */
+    clearCache() {
+        this.cache.clear();
+    }
+}
+exports.ChangelogFinder = ChangelogFinder;
+
+
+/***/ }),
+
+/***/ 3015:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * ChangelogFormatter - Formats changelog content for inclusion in PR descriptions
+ *
+ * Validates Requirements:
+ * - 5.1: Include changelog section for each updated chart
+ * - 5.2: Format changelog content using markdown
+ * - 5.3: Clearly label which chart each changelog belongs to
+ * - 5.6: Distinguish between changelog and release notes
+ * - 5.7: Truncate long content with link to full changelog
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChangelogFormatter = void 0;
+/**
+ * ChangelogFormatter formats changelog content for PR body inclusion
+ */
+class ChangelogFormatter {
+    /**
+     * Formats changelog for PR body inclusion
+     *
+     * Validates Requirements:
+     * - 5.1: Include changelog section for each chart
+     * - 5.2: Format using markdown
+     * - 5.3: Label which chart
+     * - 5.6: Distinguish changelog and release notes
+     * - 5.7: Truncate with link
+     *
+     * @param options - Formatting options
+     * @returns Formatted markdown string
+     */
+    static format(options) {
+        const { chartName, currentVersion, targetVersion, changelogResult, prunedChangelog, maxLength = 5000, } = options;
+        const sections = [];
+        // Header with chart name and version range (Requirement 5.3)
+        sections.push(`### 📦 ${chartName} (${currentVersion} → ${targetVersion})`);
+        sections.push('');
+        // Check if we have any content
+        const hasChangelog = changelogResult.found && (prunedChangelog || changelogResult.changelogText);
+        const hasReleaseNotes = changelogResult.found && changelogResult.releaseNotes;
+        if (!hasChangelog && !hasReleaseNotes) {
+            // No changelog or release notes found (Requirement 5.6)
+            sections.push('No changelog or release notes found for this update.');
+            sections.push('');
+            // Add link to commit history as fallback
+            if (changelogResult.sourceUrl) {
+                sections.push(`[View commit history](${changelogResult.sourceUrl}/commits)`);
+            }
+            return sections.join('\n');
+        }
+        // Add changelog section if available (Requirement 5.6)
+        if (hasChangelog) {
+            sections.push('#### Changelog');
+            sections.push('');
+            const changelogContent = prunedChangelog || changelogResult.changelogText || '';
+            const truncatedChangelog = this.truncate(changelogContent, maxLength, changelogResult.changelogUrl);
+            sections.push(truncatedChangelog);
+            sections.push('');
+            // Add link to full changelog if available
+            if (changelogResult.changelogUrl) {
+                sections.push(`[View full changelog](${changelogResult.changelogUrl})`);
+                sections.push('');
+            }
+        }
+        // Add release notes section if available (Requirement 5.6)
+        if (hasReleaseNotes) {
+            sections.push('#### Release Notes');
+            sections.push('');
+            const releaseNotesContent = changelogResult.releaseNotes || '';
+            const truncatedReleaseNotes = this.truncate(releaseNotesContent, maxLength, changelogResult.releaseNotesUrl);
+            sections.push(truncatedReleaseNotes);
+            sections.push('');
+            // Add link to release if available
+            if (changelogResult.releaseNotesUrl) {
+                sections.push(`[View release](${changelogResult.releaseNotesUrl})`);
+                sections.push('');
+            }
+        }
+        return sections.join('\n').trim();
+    }
+    /**
+     * Truncates text to maximum length
+     *
+     * Validates Requirement 5.7: Truncate with link to full changelog
+     *
+     * @param text - Text to truncate
+     * @param maxLength - Maximum length in characters
+     * @param url - URL to full content (optional)
+     * @returns Truncated text
+     */
+    static truncate(text, maxLength, url) {
+        if (text.length <= maxLength) {
+            return text;
+        }
+        // Find a good breaking point (end of line, paragraph, or sentence)
+        let truncateAt = maxLength;
+        // Try to break at a newline
+        const lastNewline = text.lastIndexOf('\n', maxLength);
+        if (lastNewline > maxLength * 0.8) {
+            truncateAt = lastNewline;
+        }
+        else {
+            // Try to break at a sentence
+            const lastPeriod = text.lastIndexOf('. ', maxLength);
+            if (lastPeriod > maxLength * 0.8) {
+                truncateAt = lastPeriod + 1;
+            }
+            else {
+                // Try to break at a word
+                const lastSpace = text.lastIndexOf(' ', maxLength);
+                if (lastSpace > maxLength * 0.8) {
+                    truncateAt = lastSpace;
+                }
+            }
+        }
+        // Ensure we don't break in the middle of a code block
+        const beforeTruncate = text.substring(0, truncateAt);
+        const codeBlockCount = (beforeTruncate.match(/```/g) || []).length;
+        // If odd number of code block markers, we're inside a code block
+        if (codeBlockCount % 2 !== 0) {
+            // Find the end of the code block
+            const codeBlockEnd = text.indexOf('```', truncateAt);
+            if (codeBlockEnd !== -1 && codeBlockEnd < maxLength * 1.2) {
+                truncateAt = codeBlockEnd + 3;
+            }
+        }
+        let truncated = text.substring(0, truncateAt).trim();
+        // Add ellipsis and link
+        truncated += '\n\n...';
+        if (url) {
+            truncated += `\n\n*Content truncated. [View full content](${url})*`;
+        }
+        return truncated;
+    }
+    /**
+     * Formats multiple changelog results for a PR body
+     *
+     * @param results - Map of chart names to changelog results
+     * @param versionMap - Map of chart names to version info
+     * @returns Formatted markdown string for all changelogs
+     */
+    static formatMultiple(results, versionMap) {
+        if (results.size === 0) {
+            return '';
+        }
+        const sections = [];
+        sections.push('## Changelogs');
+        sections.push('');
+        for (const [chartName, result] of results.entries()) {
+            const versionInfo = versionMap.get(chartName);
+            if (!versionInfo) {
+                continue;
+            }
+            const formatted = this.format({
+                chartName,
+                currentVersion: versionInfo.currentVersion,
+                targetVersion: versionInfo.targetVersion,
+                changelogResult: result,
+                prunedChangelog: versionInfo.prunedChangelog,
+            });
+            sections.push(formatted);
+            sections.push('');
+            sections.push('---');
+            sections.push('');
+        }
+        return sections.join('\n').trim();
+    }
+}
+exports.ChangelogFormatter = ChangelogFormatter;
+
+
+/***/ }),
+
+/***/ 3910:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Bitbucket repository client implementation
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BitbucketClient = void 0;
+const axios_1 = __importDefault(__nccwpck_require__(7269));
+/**
+ * Bitbucket client for accessing repository files
+ * Note: Bitbucket does not have a releases API like GitHub/GitLab
+ */
+class BitbucketClient {
+    axios;
+    workspace;
+    repoSlug;
+    /**
+     * Creates a new Bitbucket client
+     * @param credentials - Bitbucket credentials (username and app password) for authentication
+     * @param workspace - Workspace name (formerly team name)
+     * @param repoSlug - Repository slug (name)
+     * @param baseUrl - Bitbucket API base URL (defaults to bitbucket.org)
+     */
+    constructor(credentials, workspace, repoSlug, baseUrl = 'https://api.bitbucket.org/2.0') {
+        this.workspace = workspace;
+        this.repoSlug = repoSlug;
+        // Create axios instance with Bitbucket API configuration
+        const axiosConfig = {
+            baseURL: baseUrl,
+            timeout: 10000,
+        };
+        // Add basic auth if credentials provided
+        if (credentials) {
+            axiosConfig.auth = {
+                username: credentials.username,
+                password: credentials.password,
+            };
+        }
+        this.axios = axios_1.default.create(axiosConfig);
+    }
+    /**
+     * Lists files in the repository root
+     * @param ref - Git reference (branch, tag, or commit SHA). Defaults to default branch
+     * @returns Array of repository files
+     */
+    async listFiles(ref) {
+        try {
+            // Use 'main' or 'master' as default if no ref provided
+            const revision = ref || 'main';
+            const response = await this.axios.get(`/repositories/${this.workspace}/${this.repoSlug}/src/${revision}/`);
+            // Map Bitbucket API response to RepositoryFile interface
+            return response.data.values.map((item) => {
+                const fileName = item.path.split('/').pop() || item.path;
+                return {
+                    name: fileName,
+                    path: item.path,
+                    type: item.type === 'commit_file' ? 'file' : 'dir',
+                    size: item.size || 0,
+                    htmlUrl: `https://bitbucket.org/${this.workspace}/${this.repoSlug}/src/${revision}/${item.path}`,
+                    downloadUrl: item.links.self.href,
+                };
+            });
+        }
+        catch (error) {
+            if (axios_1.default.isAxiosError(error)) {
+                // If 'main' fails, try 'master'
+                if (ref === undefined || ref === 'main') {
+                    try {
+                        const response = await this.axios.get(`/repositories/${this.workspace}/${this.repoSlug}/src/master/`);
+                        return response.data.values.map((item) => {
+                            const fileName = item.path.split('/').pop() || item.path;
+                            return {
+                                name: fileName,
+                                path: item.path,
+                                type: item.type === 'commit_file' ? 'file' : 'dir',
+                                size: item.size || 0,
+                                htmlUrl: `https://bitbucket.org/${this.workspace}/${this.repoSlug}/src/master/${item.path}`,
+                                downloadUrl: item.links.self.href,
+                            };
+                        });
+                    }
+                    catch (masterError) {
+                        // Both failed, throw original error
+                        throw new Error(`Failed to list files in ${this.workspace}/${this.repoSlug}: ${error.message}`);
+                    }
+                }
+                throw new Error(`Failed to list files in ${this.workspace}/${this.repoSlug}: ${error.message}`);
+            }
+            throw error;
+        }
+    }
+    /**
+     * Gets the content of a file from the repository
+     * @param path - File path in the repository
+     * @param ref - Git reference (branch, tag, or commit SHA). Defaults to default branch
+     * @returns File content as string
+     */
+    async getFileContent(path, ref) {
+        try {
+            // Use 'main' or 'master' as default if no ref provided
+            const revision = ref || 'main';
+            // Bitbucket raw file API returns the file content directly
+            const response = await this.axios.get(`/repositories/${this.workspace}/${this.repoSlug}/src/${revision}/${path}`, {
+                // Ensure we get text response
+                responseType: 'text',
+            });
+            return response.data;
+        }
+        catch (error) {
+            if (axios_1.default.isAxiosError(error)) {
+                // If 'main' fails, try 'master'
+                if (ref === undefined || ref === 'main') {
+                    try {
+                        const response = await this.axios.get(`/repositories/${this.workspace}/${this.repoSlug}/src/master/${path}`, {
+                            responseType: 'text',
+                        });
+                        return response.data;
+                    }
+                    catch (masterError) {
+                        // Both failed, throw original error
+                        throw new Error(`Failed to get content for ${path} in ${this.workspace}/${this.repoSlug}: ${error.message}`);
+                    }
+                }
+                throw new Error(`Failed to get content for ${path} in ${this.workspace}/${this.repoSlug}: ${error.message}`);
+            }
+            // Re-wrap non-axios errors
+            if (error instanceof Error) {
+                throw new Error(`Failed to get content for ${path} in ${this.workspace}/${this.repoSlug}: ${error.message}`);
+            }
+            throw error;
+        }
+    }
+    /**
+     * Gets release notes for a specific version
+     * Note: Bitbucket does not have a releases API like GitHub/GitLab
+     * @param _version - Version string (not used)
+     * @returns Always returns null as Bitbucket doesn't support releases
+     */
+    async getReleaseNotes(_version) {
+        // Bitbucket does not have a releases API
+        return null;
+    }
+}
+exports.BitbucketClient = BitbucketClient;
+
+
+/***/ }),
+
+/***/ 536:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * GitHub repository client implementation
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GitHubClient = void 0;
+/**
+ * GitHub client for accessing repository files and release notes
+ */
+class GitHubClient {
+    octokit;
+    owner;
+    repo;
+    /**
+     * Creates a new GitHub client
+     * @param octokit - Octokit instance for GitHub API access
+     * @param owner - Repository owner/organization
+     * @param repo - Repository name
+     */
+    constructor(octokit, owner, repo) {
+        this.octokit = octokit;
+        this.owner = owner;
+        this.repo = repo;
+    }
+    /**
+     * Lists files in the repository root
+     * @param ref - Git reference (branch, tag, or commit SHA). Defaults to default branch
+     * @returns Array of repository files
+     */
+    async listFiles(ref) {
+        try {
+            const response = await this.octokit.rest.repos.getContent({
+                owner: this.owner,
+                repo: this.repo,
+                path: '',
+                ref,
+            });
+            // Handle single file response (shouldn't happen for root, but type-safe)
+            if (!Array.isArray(response.data)) {
+                return [];
+            }
+            // Map GitHub API response to RepositoryFile interface
+            return response.data.map((item) => ({
+                name: item.name,
+                path: item.path,
+                type: item.type === 'file' ? 'file' : 'dir',
+                size: item.size || 0,
+                htmlUrl: item.html_url || '',
+                downloadUrl: item.download_url || '',
+            }));
+        }
+        catch (error) {
+            // Handle 404 or other errors gracefully
+            if (error instanceof Error) {
+                throw new Error(`Failed to list files in ${this.owner}/${this.repo}: ${error.message}`);
+            }
+            throw error;
+        }
+    }
+    /**
+     * Gets the content of a file from the repository
+     * @param path - File path in the repository
+     * @param ref - Git reference (branch, tag, or commit SHA). Defaults to default branch
+     * @returns File content as string
+     */
+    async getFileContent(path, ref) {
+        try {
+            const response = await this.octokit.rest.repos.getContent({
+                owner: this.owner,
+                repo: this.repo,
+                path,
+                ref,
+            });
+            // Handle directory response (should be a file)
+            if (Array.isArray(response.data)) {
+                throw new Error(`Path ${path} is a directory, not a file`);
+            }
+            // Handle submodule or symlink
+            if (response.data.type !== 'file') {
+                throw new Error(`Path ${path} is not a file (type: ${response.data.type})`);
+            }
+            // Decode base64 content
+            if (!response.data.content) {
+                throw new Error(`No content found for file ${path}`);
+            }
+            return Buffer.from(response.data.content, 'base64').toString('utf-8');
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to get content for ${path} in ${this.owner}/${this.repo}: ${error.message}`);
+            }
+            throw error;
+        }
+    }
+    /**
+     * Gets release notes for a specific version
+     * @param version - Version string (e.g., "1.2.3", "v1.2.3")
+     * @returns Release notes body and URL, or null if not found
+     */
+    async getReleaseNotes(version) {
+        try {
+            // Try common tag formats
+            const tagFormats = [
+                version, // 1.2.3
+                `v${version}`, // v1.2.3
+                `release-${version}`, // release-1.2.3
+                `${this.repo}-${version}`, // repo-name-1.2.3
+            ];
+            // Try each tag format
+            for (const tag of tagFormats) {
+                try {
+                    const response = await this.octokit.rest.repos.getReleaseByTag({
+                        owner: this.owner,
+                        repo: this.repo,
+                        tag,
+                    });
+                    if (response.data && response.data.body) {
+                        return {
+                            body: response.data.body,
+                            url: response.data.html_url,
+                        };
+                    }
+                }
+                catch (error) {
+                    // Continue to next tag format if this one fails
+                    continue;
+                }
+            }
+            // No release found for any tag format
+            return null;
+        }
+        catch (error) {
+            // Return null for any errors (release not found is not an error)
+            return null;
+        }
+    }
+}
+exports.GitHubClient = GitHubClient;
+
+
+/***/ }),
+
+/***/ 7728:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * GitLab repository client implementation
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GitLabClient = void 0;
+const axios_1 = __importDefault(__nccwpck_require__(7269));
+/**
+ * GitLab client for accessing repository files and release notes
+ */
+class GitLabClient {
+    axios;
+    projectPath;
+    baseUrl;
+    /**
+     * Creates a new GitLab client
+     * @param token - GitLab personal access token (optional for public repos)
+     * @param projectPath - Project path in format "owner/repo" or URL-encoded project ID
+     * @param baseUrl - GitLab instance base URL (defaults to gitlab.com)
+     */
+    constructor(token, projectPath, baseUrl = 'https://gitlab.com') {
+        this.projectPath = encodeURIComponent(projectPath);
+        this.baseUrl = baseUrl;
+        // Create axios instance with GitLab API configuration
+        this.axios = axios_1.default.create({
+            baseURL: `${baseUrl}/api/v4`,
+            headers: token ? {
+                'PRIVATE-TOKEN': token,
+            } : {},
+            timeout: 10000,
+        });
+    }
+    /**
+     * Lists files in the repository root
+     * @param ref - Git reference (branch, tag, or commit SHA). Defaults to default branch
+     * @returns Array of repository files
+     */
+    async listFiles(ref) {
+        try {
+            const params = {
+                path: '',
+                recursive: 'false',
+            };
+            if (ref) {
+                params.ref = ref;
+            }
+            const response = await this.axios.get(`/projects/${this.projectPath}/repository/tree`, { params });
+            // Map GitLab API response to RepositoryFile interface
+            return response.data.map((item) => ({
+                name: item.name,
+                path: item.path,
+                type: item.type === 'blob' ? 'file' : 'dir',
+                size: 0, // GitLab tree API doesn't return size, would need separate call
+                htmlUrl: `${this.baseUrl}/${decodeURIComponent(this.projectPath)}/-/blob/${ref || 'main'}/${item.path}`,
+                downloadUrl: `${this.baseUrl}/${decodeURIComponent(this.projectPath)}/-/raw/${ref || 'main'}/${item.path}`,
+            }));
+        }
+        catch (error) {
+            if (axios_1.default.isAxiosError(error)) {
+                throw new Error(`Failed to list files in ${decodeURIComponent(this.projectPath)}: ${error.message}`);
+            }
+            throw error;
+        }
+    }
+    /**
+     * Gets the content of a file from the repository
+     * @param path - File path in the repository
+     * @param ref - Git reference (branch, tag, or commit SHA). Defaults to default branch
+     * @returns File content as string
+     */
+    async getFileContent(path, ref) {
+        try {
+            const params = {};
+            if (ref) {
+                params.ref = ref;
+            }
+            const response = await this.axios.get(`/projects/${this.projectPath}/repository/files/${encodeURIComponent(path)}`, { params });
+            // Decode base64 content
+            if (!response.data.content) {
+                throw new Error(`No content found for file ${path}`);
+            }
+            if (response.data.encoding === 'base64') {
+                return Buffer.from(response.data.content, 'base64').toString('utf-8');
+            }
+            // If not base64, return as-is
+            return response.data.content;
+        }
+        catch (error) {
+            if (axios_1.default.isAxiosError(error)) {
+                throw new Error(`Failed to get content for ${path} in ${decodeURIComponent(this.projectPath)}: ${error.message}`);
+            }
+            // Re-wrap non-axios errors
+            if (error instanceof Error) {
+                throw new Error(`Failed to get content for ${path} in ${decodeURIComponent(this.projectPath)}: ${error.message}`);
+            }
+            throw error;
+        }
+    }
+    /**
+     * Gets release notes for a specific version
+     * @param version - Version string (e.g., "1.2.3", "v1.2.3")
+     * @returns Release notes body and URL, or null if not found
+     */
+    async getReleaseNotes(version) {
+        try {
+            // Try common tag formats
+            const tagFormats = [
+                version, // 1.2.3
+                `v${version}`, // v1.2.3
+                `release-${version}`, // release-1.2.3
+            ];
+            // Try each tag format
+            for (const tag of tagFormats) {
+                try {
+                    const response = await this.axios.get(`/projects/${this.projectPath}/releases/${encodeURIComponent(tag)}`);
+                    if (response.data && response.data.description) {
+                        return {
+                            body: response.data.description,
+                            url: response.data._links.self,
+                        };
+                    }
+                }
+                catch (error) {
+                    // Continue to next tag format if this one fails
+                    continue;
+                }
+            }
+            // No release found for any tag format
+            return null;
+        }
+        catch (error) {
+            // Return null for any errors (release not found is not an error)
+            return null;
+        }
+    }
+}
+exports.GitLabClient = GitLabClient;
+
+
+/***/ }),
+
+/***/ 8370:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Repository URL parser for extracting platform, owner, and repo information
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseRepositoryUrl = parseRepositoryUrl;
+/**
+ * Parses a repository URL and extracts platform, owner, and repo information
+ *
+ * Supports:
+ * - GitHub: https://github.com/owner/repo, git@github.com:owner/repo.git
+ * - GitLab: https://gitlab.com/owner/repo, git@gitlab.com:owner/repo.git
+ * - Bitbucket: https://bitbucket.org/owner/repo, git@bitbucket.org:owner/repo.git
+ *
+ * @param url - Repository URL (HTTPS or SSH format)
+ * @returns RepositoryInfo object with parsed information
+ */
+function parseRepositoryUrl(url) {
+    // Normalize the URL by trimming whitespace
+    const normalizedUrl = url.trim();
+    // Try to parse as HTTPS URL
+    const httpsMatch = normalizedUrl.match(/^https?:\/\/(github\.com|gitlab\.com|bitbucket\.org)\/([^\/]+)\/([^\/\s#?]+)/i);
+    if (httpsMatch) {
+        const [, domain, owner, repo] = httpsMatch;
+        const platform = getPlatformFromDomain(domain);
+        const cleanRepo = cleanRepoName(repo);
+        return {
+            platform,
+            owner,
+            repo: cleanRepo,
+            url: normalizedUrl,
+        };
+    }
+    // Try to parse as SSH URL (git@domain:owner/repo.git)
+    const sshMatch = normalizedUrl.match(/^git@(github\.com|gitlab\.com|bitbucket\.org):([^\/]+)\/(.+?)(?:\.git)?$/i);
+    if (sshMatch) {
+        const [, domain, owner, repo] = sshMatch;
+        const platform = getPlatformFromDomain(domain);
+        const cleanRepo = cleanRepoName(repo);
+        return {
+            platform,
+            owner,
+            repo: cleanRepo,
+            url: normalizedUrl,
+        };
+    }
+    // If no pattern matches, return unknown platform
+    return {
+        platform: 'unknown',
+        owner: '',
+        repo: '',
+        url: normalizedUrl,
+    };
+}
+/**
+ * Determines the platform from a domain name
+ *
+ * @param domain - Domain name (e.g., 'github.com', 'gitlab.com')
+ * @returns Platform identifier
+ */
+function getPlatformFromDomain(domain) {
+    const lowerDomain = domain.toLowerCase();
+    if (lowerDomain.includes('github')) {
+        return 'github';
+    }
+    if (lowerDomain.includes('gitlab')) {
+        return 'gitlab';
+    }
+    if (lowerDomain.includes('bitbucket')) {
+        return 'bitbucket';
+    }
+    return 'unknown';
+}
+/**
+ * Cleans repository name by removing .git suffix and trailing slashes
+ *
+ * @param repo - Raw repository name
+ * @returns Cleaned repository name
+ */
+function cleanRepoName(repo) {
+    return repo
+        .replace(/\.git$/i, '') // Remove .git suffix
+        .replace(/\/+$/, '') // Remove trailing slashes
+        .trim();
+}
+
+
+/***/ }),
+
+/***/ 8637:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * VersionPruner - Extracts relevant version sections from changelog content
+ *
+ * Validates Requirements:
+ * - 4.1: Parse changelog to identify version sections
+ * - 4.2: Extract content for all versions within the version range
+ * - 4.3: Recognize common version header formats
+ * - 4.5: Preserve markdown formatting in extracted sections
+ * - 4.6: Include version headers in extracted content
+ * - 4.7: Handle unreleased sections appropriately
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VersionPruner = void 0;
+/**
+ * VersionPruner extracts relevant version sections from changelog content
+ */
+class VersionPruner {
+    /**
+     * Extracts relevant version sections from changelog
+     *
+     * Validates Requirements:
+     * - 4.1: Parse changelog to identify version sections
+     * - 4.2: Extract content for all versions within version range
+     * - 4.4: Return full changelog with warning if parsing fails
+     * - 4.5: Preserve markdown formatting
+     *
+     * @param options - Pruning options
+     * @returns Pruned changelog result
+     */
+    static prune(options) {
+        const { currentVersion, targetVersion, changelogText } = options;
+        // Split changelog into lines
+        const lines = changelogText.split('\n');
+        // Find line numbers for target and current versions
+        const targetLine = this.findVersionLine(lines, targetVersion);
+        const currentLine = this.findVersionLine(lines, currentVersion);
+        // If we can't find both versions, return full changelog with warning
+        if (targetLine === null || currentLine === null) {
+            return {
+                prunedText: changelogText,
+                versionsFound: false,
+                warning: `Could not find version headers for ${targetVersion} and/or ${currentVersion}`,
+            };
+        }
+        // Find the next version after current (to know where to stop)
+        const nextVersionLine = this.findNextVersionLine(lines, currentLine + 1);
+        // Extract the range (from target to current, or to next version if found)
+        const endLine = nextVersionLine !== null ? nextVersionLine - 1 : lines.length - 1;
+        const prunedText = this.extractVersionRange(lines, targetLine, endLine);
+        return {
+            prunedText,
+            versionsFound: true,
+        };
+    }
+    /**
+     * Finds the line number of a version header in the changelog
+     *
+     * Validates Requirement 4.3: Recognize common version header formats
+     *
+     * @param lines - Changelog lines
+     * @param version - Version to find
+     * @returns Line number (0-indexed) or null if not found
+     */
+    static findVersionLine(lines, version) {
+        // Normalize version for matching (remove 'v' prefix if present)
+        const normalizedVersion = version.replace(/^v/, '');
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            // Skip unreleased sections unless explicitly looking for them
+            if (this.isUnreleasedHeader(line) && !version.toLowerCase().includes('unreleased')) {
+                continue;
+            }
+            // Check if this line contains the version
+            if (this.isVersionHeader(line, normalizedVersion)) {
+                return i;
+            }
+            // Check for underlined version headers (next line has underline)
+            if (i < lines.length - 1) {
+                const nextLine = lines[i + 1].trim();
+                if (this.isUnderline(nextLine) && line.includes(normalizedVersion)) {
+                    return i;
+                }
+            }
+        }
+        return null;
+    }
+    /**
+     * Finds the next version header after a given line
+     *
+     * @param lines - Changelog lines
+     * @param startLine - Line to start searching from
+     * @returns Line number of next version or null if not found
+     */
+    static findNextVersionLine(lines, startLine) {
+        for (let i = startLine; i < lines.length; i++) {
+            const line = lines[i].trim();
+            // Check if this is a version header
+            if (this.looksLikeVersionHeader(line)) {
+                return i;
+            }
+            // Check for underlined headers
+            if (i < lines.length - 1) {
+                const nextLine = lines[i + 1].trim();
+                if (this.isUnderline(nextLine) && this.looksLikeVersionHeader(line)) {
+                    return i;
+                }
+            }
+        }
+        return null;
+    }
+    /**
+     * Checks if a line is a version header for a specific version
+     *
+     * @param line - Line to check
+     * @param version - Version to match
+     * @returns true if line is a version header for the version
+     */
+    static isVersionHeader(line, version) {
+        // Escape special regex characters in version
+        const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Common version header patterns
+        const patterns = [
+            // Markdown headers: ## [1.2.3], ## 1.2.3, ## v1.2.3
+            new RegExp(`^#+\\s*\\[?v?${escapedVersion}\\]?`, 'i'),
+            // Keep a Changelog format: ## [1.2.3] - 2024-01-15
+            new RegExp(`^#+\\s*\\[v?${escapedVersion}\\]\\s*-`, 'i'),
+            // Plain version: 1.2.3, v1.2.3
+            new RegExp(`^v?${escapedVersion}:?\\s*$`, 'i'),
+            // Version with date: 1.2.3 - 2024-01-15
+            new RegExp(`^v?${escapedVersion}\\s*-\\s*\\d{4}`, 'i'),
+            // Bullet point: - version 1.2.3, * 1.2.3
+            new RegExp(`^[\\*\\-\\+]\\s*(version\\s+)?v?${escapedVersion}`, 'i'),
+            // reStructuredText: Version 1.2.3
+            new RegExp(`^version\\s+v?${escapedVersion}`, 'i'),
+        ];
+        return patterns.some(pattern => pattern.test(line));
+    }
+    /**
+     * Checks if a line looks like a version header (without specific version)
+     *
+     * @param line - Line to check
+     * @returns true if line looks like a version header
+     */
+    static looksLikeVersionHeader(line) {
+        // Common patterns that indicate a version header
+        const patterns = [
+            /^#+\s*\[?\d+\.\d+/, // ## [1.2.3] or ## 1.2.3
+            /^#+\s*v\d+\.\d+/, // ## v1.2.3
+            /^v?\d+\.\d+\.\d+/, // 1.2.3 or v1.2.3
+            /^[\*\-\+]\s*v?\d+\.\d+/, // - 1.2.3 or * v1.2.3
+            /^version\s+\d+\.\d+/i, // Version 1.2.3
+            /^\d{4}-\d{2}-\d{2}/, // 2024-01-15 (date-based)
+        ];
+        return patterns.some(pattern => pattern.test(line));
+    }
+    /**
+     * Checks if a line is an underline (for underlined headers)
+     *
+     * @param line - Line to check
+     * @returns true if line is an underline
+     */
+    static isUnderline(line) {
+        return /^[=\-\+]{3,}\s*$/.test(line);
+    }
+    /**
+     * Checks if a line is an "unreleased" header
+     *
+     * Validates Requirement 4.7: Handle unreleased sections
+     *
+     * @param line - Line to check
+     * @returns true if line is an unreleased header
+     */
+    static isUnreleasedHeader(line) {
+        const lowerLine = line.toLowerCase();
+        return (lowerLine.includes('unreleased') ||
+            lowerLine.includes('upcoming') ||
+            lowerLine.includes('next release'));
+    }
+    /**
+     * Extracts lines between start and end (inclusive)
+     *
+     * Validates Requirements:
+     * - 4.5: Preserve markdown formatting
+     * - 4.6: Include version headers
+     *
+     * @param lines - All changelog lines
+     * @param startLine - Start line (inclusive)
+     * @param endLine - End line (inclusive)
+     * @returns Extracted text
+     */
+    static extractVersionRange(lines, startLine, endLine) {
+        // Handle edge cases
+        if (startLine < 0 || startLine >= lines.length) {
+            return '';
+        }
+        if (endLine < 0 || endLine >= lines.length) {
+            endLine = lines.length - 1;
+        }
+        if (startLine > endLine) {
+            return '';
+        }
+        // Extract the range (inclusive)
+        const extractedLines = lines.slice(startLine, endLine + 1);
+        // Join lines preserving formatting
+        return extractedLines.join('\n').trim();
+    }
+}
+exports.VersionPruner = VersionPruner;
+
+
+/***/ }),
+
 /***/ 3006:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -41861,6 +43322,21 @@ class ConfigurationManager {
         if (external['log-level']) {
             merged.logLevel = external['log-level'];
         }
+        // Changelog configuration (Requirement 9.7)
+        if (external.changelog) {
+            merged.changelog = {
+                enabled: external.changelog.enabled ?? merged.changelog.enabled,
+                maxLength: external.changelog['max-length'] ?? merged.changelog.maxLength,
+                cacheTTL: external.changelog['cache-ttl'] ?? merged.changelog.cacheTTL,
+                gitlabToken: external.changelog['gitlab-token'] ?? merged.changelog.gitlabToken,
+                bitbucketCredentials: external.changelog['bitbucket-credentials']
+                    ? {
+                        username: external.changelog['bitbucket-credentials'].username,
+                        password: external.changelog['bitbucket-credentials'].password,
+                    }
+                    : merged.changelog.bitbucketCredentials,
+            };
+        }
         return merged;
     }
     /**
@@ -41986,6 +43462,31 @@ class ConfigurationManager {
         }
         // GitHub token (required)
         result.githubToken = core.getInput('github-token', { required: true });
+        // Changelog configuration (Requirement 9.7)
+        const changelogEnabled = core.getInput('changelog-enabled');
+        if (changelogEnabled) {
+            result.changelog.enabled = changelogEnabled === 'true';
+        }
+        const changelogMaxLength = core.getInput('changelog-max-length');
+        if (changelogMaxLength) {
+            result.changelog.maxLength = parseInt(changelogMaxLength, 10);
+        }
+        const changelogCacheTTL = core.getInput('changelog-cache-ttl');
+        if (changelogCacheTTL) {
+            result.changelog.cacheTTL = parseInt(changelogCacheTTL, 10);
+        }
+        const gitlabToken = core.getInput('gitlab-token');
+        if (gitlabToken) {
+            result.changelog.gitlabToken = gitlabToken;
+        }
+        const bitbucketUsername = core.getInput('bitbucket-username');
+        const bitbucketPassword = core.getInput('bitbucket-password');
+        if (bitbucketUsername && bitbucketPassword) {
+            result.changelog.bitbucketCredentials = {
+                username: bitbucketUsername,
+                password: bitbucketPassword,
+            };
+        }
         return result;
     }
     /**
@@ -42166,6 +43667,19 @@ class ConfigurationManager {
                         errors.push(`Invalid group update type in "${groupName}": ${updateType}. Must be one of: ${validUpdateTypes.join(', ')}`);
                     }
                 }
+            }
+        }
+        // Validate changelog configuration (Requirement 9.7)
+        if (config.changelog.maxLength < 0) {
+            errors.push('changelog-max-length must be a non-negative number');
+        }
+        if (config.changelog.cacheTTL < 0) {
+            errors.push('changelog-cache-ttl must be a non-negative number');
+        }
+        // Validate Bitbucket credentials (both username and password required if one is provided)
+        if (config.changelog.bitbucketCredentials) {
+            if (!config.changelog.bitbucketCredentials.username || !config.changelog.bitbucketCredentials.password) {
+                errors.push('Both bitbucket-username and bitbucket-password must be provided together');
             }
         }
         return {
@@ -42565,6 +44079,8 @@ const dependency_extractor_1 = __nccwpck_require__(2254);
 const version_resolver_1 = __nccwpck_require__(2733);
 const file_updater_1 = __nccwpck_require__(5259);
 const pull_request_manager_1 = __nccwpck_require__(373);
+const changelog_finder_1 = __nccwpck_require__(2897);
+const version_pruner_1 = __nccwpck_require__(8637);
 const logger_1 = __nccwpck_require__(7893);
 /**
  * Main orchestrator class for the ArgoCD Helm Updater
@@ -42577,6 +44093,7 @@ class ArgoCDHelmUpdater {
     resolver;
     updater;
     prManager = null;
+    changelogFinder = null;
     /**
      * Creates a new ArgoCDHelmUpdater instance
      *
@@ -42601,6 +44118,20 @@ class ArgoCDHelmUpdater {
         if (!this.config.dryRun && this.config.githubToken) {
             const octokit = github.getOctokit(this.config.githubToken);
             this.prManager = new pull_request_manager_1.PullRequestManager(octokit, this.config);
+        }
+        // Initialize changelog finder if enabled (Requirement 9.1, 9.7)
+        if (this.config.changelog.enabled) {
+            this.changelogFinder = new changelog_finder_1.ChangelogFinder({
+                githubToken: this.config.githubToken,
+                gitlabToken: this.config.changelog.gitlabToken,
+                bitbucketCredentials: this.config.changelog.bitbucketCredentials,
+                cacheTTL: this.config.changelog.cacheTTL,
+                enableCache: true,
+            });
+            this.logger.info('Changelog generation enabled');
+        }
+        else {
+            this.logger.info('Changelog generation disabled');
         }
     }
     /**
@@ -42764,9 +44295,11 @@ class ArgoCDHelmUpdater {
         const prUrls = [];
         for (const group of groups) {
             try {
+                // Fetch changelogs for all charts in this group (Requirement 9.1, 9.2)
+                const changelogResults = await this.fetchChangelogs(group);
                 // Generate PR title and body
                 const title = this.prManager.generatePRTitle(group);
-                const body = this.prManager.generatePRBody(group);
+                const body = this.prManager.generatePRBody(group, changelogResults);
                 const branch = this.prManager.generateBranchName(group);
                 // Create or update PR
                 const prNumber = await this.prManager.createOrUpdatePR(group, {
@@ -42795,6 +44328,83 @@ class ArgoCDHelmUpdater {
         0, // chartsFound will be set by caller
         prNumbers.length > 0 ? prNumbers[0] : null, prUrls.length > 0 ? prUrls[0] : null);
         return prsCreated;
+    }
+    /**
+     * Fetches changelogs for all charts in a group of file updates
+     *
+     * Validates Requirements:
+     * - 9.1: Integrate with PullRequestManager
+     * - 9.2: Receive chart metadata from VersionResolver
+     * - 9.4: Not block PR creation if changelog retrieval fails
+     * - 9.5: Log all operations using existing logging framework
+     *
+     * @param fileUpdates - File updates to fetch changelogs for
+     * @returns Map of chart names to changelog results
+     * @private
+     */
+    async fetchChangelogs(fileUpdates) {
+        // Return undefined if changelog finder is not initialized (Requirement 9.7)
+        if (!this.changelogFinder) {
+            return undefined;
+        }
+        const changelogResults = new Map();
+        const allUpdates = fileUpdates.flatMap((file) => file.updates);
+        // Deduplicate by chart name (same chart may appear in multiple files)
+        const uniqueUpdates = new Map();
+        for (const update of allUpdates) {
+            const chartName = update.dependency.chartName;
+            if (!uniqueUpdates.has(chartName)) {
+                uniqueUpdates.set(chartName, update);
+            }
+        }
+        // Fetch changelogs for each unique chart (Requirement 9.5)
+        this.logger.info(`Fetching changelogs for ${uniqueUpdates.size} chart(s)`);
+        for (const [chartName, update] of uniqueUpdates.entries()) {
+            try {
+                this.logger.debug(`Fetching changelog for ${chartName}`);
+                const result = await this.changelogFinder.findChangelog(update);
+                // Prune changelog to relevant version range (Requirement 4.1, 4.2)
+                if (result.found && result.changelogText) {
+                    try {
+                        const pruneResult = version_pruner_1.VersionPruner.prune({
+                            changelogText: result.changelogText,
+                            currentVersion: update.currentVersion,
+                            targetVersion: update.newVersion,
+                        });
+                        // Use pruned changelog if successful, otherwise use full changelog
+                        if (pruneResult.versionsFound && pruneResult.prunedText) {
+                            result.changelogText = pruneResult.prunedText;
+                            this.logger.debug(`Pruned changelog for ${chartName} (${update.currentVersion} → ${update.newVersion})`);
+                        }
+                        else if (pruneResult.warning) {
+                            this.logger.debug(`Using full changelog for ${chartName}: ${pruneResult.warning}`);
+                        }
+                    }
+                    catch (pruneError) {
+                        // If pruning fails, use full changelog (non-blocking)
+                        this.logger.debug(`Failed to prune changelog for ${chartName}, using full changelog: ${pruneError instanceof Error ? pruneError.message : String(pruneError)}`);
+                    }
+                }
+                changelogResults.set(chartName, result);
+                if (result.found) {
+                    this.logger.info(`Found changelog for ${chartName}`);
+                }
+                else {
+                    this.logger.debug(`No changelog found for ${chartName}`);
+                }
+            }
+            catch (error) {
+                // Log error but don't fail PR creation (Requirement 9.4, 6.1, 6.2)
+                this.logger.warn(`Failed to fetch changelog for ${chartName}: ${error instanceof Error ? error.message : String(error)}`);
+                // Add a result indicating failure
+                changelogResults.set(chartName, {
+                    found: false,
+                    sourceUrl: update.dependency.repoURL,
+                    error: error instanceof Error ? error.message : String(error),
+                });
+            }
+        }
+        return changelogResults;
     }
     /**
      * Set GitHub Action outputs
@@ -42892,6 +44502,7 @@ exports.PullRequestManager = void 0;
 const github = __importStar(__nccwpck_require__(3228));
 const semver = __importStar(__nccwpck_require__(2088));
 const logger_1 = __nccwpck_require__(7893);
+const changelog_formatter_1 = __nccwpck_require__(3015);
 /**
  * PullRequestManager class for managing GitHub PR operations
  */
@@ -43351,13 +44962,15 @@ class PullRequestManager {
      * - Table of chart updates grouped by manifest file
      * - Links to chart repositories
      * - Links to release notes when available
+     * - Changelog sections for each updated chart (if provided)
      *
-     * Requirements: 6.3, 6.4, 6.5
+     * Requirements: 6.3, 6.4, 6.5, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 9.1
      *
      * @param fileUpdates - List of file updates
+     * @param changelogResults - Optional map of chart names to changelog results
      * @returns Formatted PR body in Markdown
      */
-    generatePRBody(fileUpdates) {
+    generatePRBody(fileUpdates, changelogResults) {
         const allUpdates = fileUpdates.flatMap((file) => file.updates);
         if (allUpdates.length === 0) {
             return 'This PR updates Helm chart versions in ArgoCD manifests.';
@@ -43396,6 +45009,39 @@ class PullRequestManager {
                 sections.push(`| ${chartName} | ${repoLink} | \`${currentVersion}\` | \`${newVersion}\` | ${releaseNotesLink} |`);
             }
             sections.push('');
+        }
+        // Add changelog sections if provided (Requirement 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7)
+        if (changelogResults && changelogResults.size > 0) {
+            sections.push('## Changelogs');
+            sections.push('');
+            // Create a map of chart names to version info for formatting
+            const versionMap = new Map();
+            for (const update of allUpdates) {
+                const chartName = update.dependency.chartName;
+                if (!versionMap.has(chartName)) {
+                    versionMap.set(chartName, {
+                        currentVersion: update.currentVersion,
+                        targetVersion: update.newVersion,
+                    });
+                }
+            }
+            // Format each changelog
+            for (const [chartName, changelogResult] of changelogResults.entries()) {
+                const versionInfo = versionMap.get(chartName);
+                if (!versionInfo) {
+                    continue;
+                }
+                const formatted = changelog_formatter_1.ChangelogFormatter.format({
+                    chartName,
+                    currentVersion: versionInfo.currentVersion,
+                    targetVersion: versionInfo.targetVersion,
+                    changelogResult,
+                });
+                sections.push(formatted);
+                sections.push('');
+                sections.push('---');
+                sections.push('');
+            }
         }
         // Add footer with helpful information
         sections.push('---');

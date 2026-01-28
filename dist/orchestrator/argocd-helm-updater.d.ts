@@ -24,6 +24,7 @@ export declare class ArgoCDHelmUpdater {
     private resolver;
     private updater;
     private prManager;
+    private changelogFinder;
     /**
      * Creates a new ArgoCDHelmUpdater instance
      *
@@ -80,6 +81,20 @@ export declare class ArgoCDHelmUpdater {
      * @private
      */
     private createPullRequests;
+    /**
+     * Fetches changelogs for all charts in a group of file updates
+     *
+     * Validates Requirements:
+     * - 9.1: Integrate with PullRequestManager
+     * - 9.2: Receive chart metadata from VersionResolver
+     * - 9.4: Not block PR creation if changelog retrieval fails
+     * - 9.5: Log all operations using existing logging framework
+     *
+     * @param fileUpdates - File updates to fetch changelogs for
+     * @returns Map of chart names to changelog results
+     * @private
+     */
+    private fetchChangelogs;
     /**
      * Set GitHub Action outputs
      *
