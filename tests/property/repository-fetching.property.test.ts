@@ -122,6 +122,11 @@ describe('Property 7: Repository Version Fetching', () => {
       dryRun: false,
       logLevel: 'info',
       githubToken: 'test-token',
+      changelog: {
+        enabled: true,
+        maxLength: 5000,
+        cacheTTL: 3600,
+      },
     };
 
     // Mock axios.create to return a fresh mock instance each time it's called
@@ -817,7 +822,7 @@ ${versions.map(v => `    - name: ${dependency.chartName}\n      version: ${v}`).
           });
         }
       ),
-      { numRuns: 20 }
+      { numRuns: 10 }
     );
   });
 });

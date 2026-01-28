@@ -21,12 +21,14 @@ import { DependencyExtractor } from '../extractor/dependency-extractor';
 import { VersionResolver } from '../resolver/version-resolver';
 import { FileUpdater } from '../updater/file-updater';
 import { PullRequestManager } from '../pr/pull-request-manager';
+import { ChangelogFinder } from '../changelog/changelog-finder';
 import { ActionConfig } from '../types/config';
 import { Logger, createLogger } from '../utils/logger';
 import { HelmDependency } from '../types/dependency';
 import { VersionUpdate } from '../types/version';
 import { FileUpdate } from '../types/file-update';
 import { ManifestFile } from '../types/manifest';
+import { ChangelogResult } from '../types/changelog';
 
 /**
  * Main orchestrator class for the ArgoCD Helm Updater
@@ -39,6 +41,7 @@ export class ArgoCDHelmUpdater {
   private resolver: VersionResolver;
   private updater: FileUpdater;
   private prManager: PullRequestManager | null = null;
+  private changelogFinder: ChangelogFinder | null = null;
 
   /**
    * Creates a new ArgoCDHelmUpdater instance
@@ -68,6 +71,20 @@ export class ArgoCDHelmUpdater {
     if (!this.config.dryRun && this.config.githubToken) {
       const octokit = github.getOctokit(this.config.githubToken);
       this.prManager = new PullRequestManager(octokit, this.config);
+    }
+
+    // Initialize changelog finder if enabled (Requirement 9.1, 9.7)
+    if (this.config.changelog.enabled) {
+      this.changelogFinder = new ChangelogFinder({
+        githubToken: this.config.githubToken,
+        gitlabToken: this.config.changelog.gitlabToken,
+        bitbucketCredentials: this.config.changelog.bitbucketCredentials,
+        cacheTTL: this.config.changelog.cacheTTL,
+        enableCache: true,
+      });
+      this.logger.info('Changelog generation enabled');
+    } else {
+      this.logger.info('Changelog generation disabled');
     }
   }
 
@@ -266,9 +283,12 @@ export class ArgoCDHelmUpdater {
 
     for (const group of groups) {
       try {
+        // Fetch changelogs for all charts in this group (Requirement 9.1, 9.2)
+        const changelogResults = await this.fetchChangelogs(group);
+
         // Generate PR title and body
         const title = this.prManager.generatePRTitle(group);
-        const body = this.prManager.generatePRBody(group);
+        const body = this.prManager.generatePRBody(group, changelogResults);
         const branch = this.prManager.generateBranchName(group);
 
         // Create or update PR
@@ -306,6 +326,70 @@ export class ArgoCDHelmUpdater {
     );
 
     return prsCreated;
+  }
+
+  /**
+   * Fetches changelogs for all charts in a group of file updates
+   * 
+   * Validates Requirements:
+   * - 9.1: Integrate with PullRequestManager
+   * - 9.2: Receive chart metadata from VersionResolver
+   * - 9.4: Not block PR creation if changelog retrieval fails
+   * - 9.5: Log all operations using existing logging framework
+   *
+   * @param fileUpdates - File updates to fetch changelogs for
+   * @returns Map of chart names to changelog results
+   * @private
+   */
+  private async fetchChangelogs(fileUpdates: FileUpdate[]): Promise<Map<string, ChangelogResult> | undefined> {
+    // Return undefined if changelog finder is not initialized (Requirement 9.7)
+    if (!this.changelogFinder) {
+      return undefined;
+    }
+
+    const changelogResults = new Map<string, ChangelogResult>();
+    const allUpdates = fileUpdates.flatMap((file) => file.updates);
+
+    // Deduplicate by chart name (same chart may appear in multiple files)
+    const uniqueUpdates = new Map<string, VersionUpdate>();
+    for (const update of allUpdates) {
+      const chartName = update.dependency.chartName;
+      if (!uniqueUpdates.has(chartName)) {
+        uniqueUpdates.set(chartName, update);
+      }
+    }
+
+    // Fetch changelogs for each unique chart (Requirement 9.5)
+    this.logger.info(`Fetching changelogs for ${uniqueUpdates.size} chart(s)`);
+
+    for (const [chartName, update] of uniqueUpdates.entries()) {
+      try {
+        this.logger.debug(`Fetching changelog for ${chartName}`);
+        const result = await this.changelogFinder.findChangelog(update);
+        changelogResults.set(chartName, result);
+
+        if (result.found) {
+          this.logger.info(`Found changelog for ${chartName}`);
+        } else {
+          this.logger.debug(`No changelog found for ${chartName}`);
+        }
+      } catch (error) {
+        // Log error but don't fail PR creation (Requirement 9.4, 6.1, 6.2)
+        this.logger.warn(
+          `Failed to fetch changelog for ${chartName}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        // Add a result indicating failure
+        changelogResults.set(chartName, {
+          found: false,
+          sourceUrl: update.dependency.repoURL,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return changelogResults;
   }
 
   /**

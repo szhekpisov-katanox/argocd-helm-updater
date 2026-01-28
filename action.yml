@@ -134,6 +134,37 @@ inputs:
     description: 'GitHub token for API access'
     required: true
     default: ${{ github.token }}
+  
+  # Changelog configuration
+  changelog-enabled:
+    description: 'Enable changelog generation in PR descriptions (true/false)'
+    required: false
+    default: 'true'
+  
+  changelog-max-length:
+    description: 'Maximum changelog length in PR body (characters)'
+    required: false
+    default: '5000'
+  
+  changelog-cache-ttl:
+    description: 'Changelog cache TTL in seconds'
+    required: false
+    default: '3600'
+  
+  gitlab-token:
+    description: 'GitLab token for accessing private GitLab repositories'
+    required: false
+    default: ''
+  
+  bitbucket-username:
+    description: 'Bitbucket username for accessing private Bitbucket repositories'
+    required: false
+    default: ''
+  
+  bitbucket-password:
+    description: 'Bitbucket app password for accessing private Bitbucket repositories'
+    required: false
+    default: ''
 
 outputs:
   updates-found:

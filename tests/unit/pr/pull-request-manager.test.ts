@@ -88,6 +88,11 @@ describe('PullRequestManager', () => {
       dryRun: false,
       logLevel: 'info',
       githubToken: 'test-token',
+      changelog: {
+        enabled: true,
+        maxLength: 5000,
+        cacheTTL: 3600,
+      },
     };
 
     // Create manager instance
@@ -1301,6 +1306,221 @@ describe('PullRequestManager', () => {
 
       expect(body).toContain('### `manifests/app1.yaml`');
       expect(body).not.toContain('### `manifests/app2.yaml`');
+    });
+
+    it('should include changelog sections when changelog results are provided', () => {
+      const fileUpdates = [
+        createFileUpdate('manifests/app.yaml', [
+          {
+            chartName: 'nginx',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '15.9.0',
+            newVersion: '15.10.0',
+          },
+        ]),
+      ];
+
+      const changelogResults = new Map([
+        [
+          'nginx',
+          {
+            found: true,
+            sourceUrl: 'https://github.com/bitnami/charts',
+            changelogText: '## [15.10.0]\n\n- Feature: Added new capability\n- Fix: Resolved bug',
+            changelogUrl: 'https://github.com/bitnami/charts/blob/main/CHANGELOG.md',
+          },
+        ],
+      ]);
+
+      const body = manager.generatePRBody(fileUpdates, changelogResults);
+
+      expect(body).toContain('## Changelogs');
+      expect(body).toContain('### 📦 nginx (15.9.0 → 15.10.0)');
+      expect(body).toContain('#### Changelog');
+      expect(body).toContain('Feature: Added new capability');
+      expect(body).toContain('[View full changelog](https://github.com/bitnami/charts/blob/main/CHANGELOG.md)');
+    });
+
+    it('should include release notes in changelog sections when available', () => {
+      const fileUpdates = [
+        createFileUpdate('manifests/app.yaml', [
+          {
+            chartName: 'nginx',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '15.9.0',
+            newVersion: '15.10.0',
+          },
+        ]),
+      ];
+
+      const changelogResults = new Map([
+        [
+          'nginx',
+          {
+            found: true,
+            sourceUrl: 'https://github.com/bitnami/charts',
+            releaseNotes: 'This release includes important security updates.',
+            releaseNotesUrl: 'https://github.com/bitnami/charts/releases/tag/nginx-15.10.0',
+          },
+        ],
+      ]);
+
+      const body = manager.generatePRBody(fileUpdates, changelogResults);
+
+      expect(body).toContain('## Changelogs');
+      expect(body).toContain('#### Release Notes');
+      expect(body).toContain('This release includes important security updates.');
+      expect(body).toContain('[View release](https://github.com/bitnami/charts/releases/tag/nginx-15.10.0)');
+    });
+
+    it('should include both changelog and release notes when both are available', () => {
+      const fileUpdates = [
+        createFileUpdate('manifests/app.yaml', [
+          {
+            chartName: 'nginx',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '15.9.0',
+            newVersion: '15.10.0',
+          },
+        ]),
+      ];
+
+      const changelogResults = new Map([
+        [
+          'nginx',
+          {
+            found: true,
+            sourceUrl: 'https://github.com/bitnami/charts',
+            changelogText: '## [15.10.0]\n\n- Feature: Added new capability',
+            changelogUrl: 'https://github.com/bitnami/charts/blob/main/CHANGELOG.md',
+            releaseNotes: 'This release includes important security updates.',
+            releaseNotesUrl: 'https://github.com/bitnami/charts/releases/tag/nginx-15.10.0',
+          },
+        ],
+      ]);
+
+      const body = manager.generatePRBody(fileUpdates, changelogResults);
+
+      expect(body).toContain('#### Changelog');
+      expect(body).toContain('Feature: Added new capability');
+      expect(body).toContain('#### Release Notes');
+      expect(body).toContain('This release includes important security updates.');
+    });
+
+    it('should handle multiple charts with changelogs', () => {
+      const fileUpdates = [
+        createFileUpdate('manifests/app1.yaml', [
+          {
+            chartName: 'nginx',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '15.9.0',
+            newVersion: '15.10.0',
+          },
+        ]),
+        createFileUpdate('manifests/app2.yaml', [
+          {
+            chartName: 'redis',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '18.0.0',
+            newVersion: '18.1.0',
+          },
+        ]),
+      ];
+
+      const changelogResults = new Map([
+        [
+          'nginx',
+          {
+            found: true,
+            sourceUrl: 'https://github.com/bitnami/charts',
+            changelogText: '## [15.10.0]\n\n- Nginx updates',
+            changelogUrl: 'https://github.com/bitnami/charts/blob/main/nginx/CHANGELOG.md',
+          },
+        ],
+        [
+          'redis',
+          {
+            found: true,
+            sourceUrl: 'https://github.com/bitnami/charts',
+            changelogText: '## [18.1.0]\n\n- Redis updates',
+            changelogUrl: 'https://github.com/bitnami/charts/blob/main/redis/CHANGELOG.md',
+          },
+        ],
+      ]);
+
+      const body = manager.generatePRBody(fileUpdates, changelogResults);
+
+      expect(body).toContain('### 📦 nginx (15.9.0 → 15.10.0)');
+      expect(body).toContain('Nginx updates');
+      expect(body).toContain('### 📦 redis (18.0.0 → 18.1.0)');
+      expect(body).toContain('Redis updates');
+    });
+
+    it('should not include changelog section when no changelog results provided', () => {
+      const fileUpdates = [
+        createFileUpdate('manifests/app.yaml', [
+          {
+            chartName: 'nginx',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '15.9.0',
+            newVersion: '15.10.0',
+          },
+        ]),
+      ];
+
+      const body = manager.generatePRBody(fileUpdates);
+
+      expect(body).not.toContain('## Changelogs');
+      expect(body).not.toContain('#### Changelog');
+    });
+
+    it('should not include changelog section when changelog results map is empty', () => {
+      const fileUpdates = [
+        createFileUpdate('manifests/app.yaml', [
+          {
+            chartName: 'nginx',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '15.9.0',
+            newVersion: '15.10.0',
+          },
+        ]),
+      ];
+
+      const changelogResults = new Map();
+
+      const body = manager.generatePRBody(fileUpdates, changelogResults);
+
+      expect(body).not.toContain('## Changelogs');
+    });
+
+    it('should show fallback message when changelog not found', () => {
+      const fileUpdates = [
+        createFileUpdate('manifests/app.yaml', [
+          {
+            chartName: 'nginx',
+            repoURL: 'https://charts.bitnami.com/bitnami',
+            currentVersion: '15.9.0',
+            newVersion: '15.10.0',
+          },
+        ]),
+      ];
+
+      const changelogResults = new Map([
+        [
+          'nginx',
+          {
+            found: false,
+            sourceUrl: 'https://github.com/bitnami/charts',
+          },
+        ],
+      ]);
+
+      const body = manager.generatePRBody(fileUpdates, changelogResults);
+
+      expect(body).toContain('## Changelogs');
+      expect(body).toContain('### 📦 nginx (15.9.0 → 15.10.0)');
+      expect(body).toContain('No changelog or release notes found for this update.');
+      expect(body).toContain('[View commit history](https://github.com/bitnami/charts/commits)');
     });
   });
 

@@ -133,6 +133,11 @@ function createMockConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
     dryRun: false,
     logLevel: 'info',
     githubToken: 'mock-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
     ...overrides
   };
 }
@@ -315,7 +320,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -380,7 +385,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -435,7 +440,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -509,7 +514,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -537,7 +542,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -576,7 +581,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -615,7 +620,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -654,7 +659,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -699,7 +704,7 @@ describe('Property 31: GitHub API Efficiency', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 

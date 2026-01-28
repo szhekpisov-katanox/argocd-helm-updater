@@ -16,6 +16,8 @@ import { ActionConfig } from '../types/config';
 import { FileUpdate } from '../types/file-update';
 import { VersionUpdate } from '../types/version';
 import { Logger, createLogger } from '../utils/logger';
+import { ChangelogResult } from '../types/changelog';
+import { ChangelogFormatter } from '../changelog/changelog-formatter';
 
 /**
  * Options for creating or updating a pull request
@@ -602,13 +604,18 @@ export class PullRequestManager {
    * - Table of chart updates grouped by manifest file
    * - Links to chart repositories
    * - Links to release notes when available
+   * - Changelog sections for each updated chart (if provided)
    *
-   * Requirements: 6.3, 6.4, 6.5
+   * Requirements: 6.3, 6.4, 6.5, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 9.1
    *
    * @param fileUpdates - List of file updates
+   * @param changelogResults - Optional map of chart names to changelog results
    * @returns Formatted PR body in Markdown
    */
-  generatePRBody(fileUpdates: FileUpdate[]): string {
+  generatePRBody(
+    fileUpdates: FileUpdate[],
+    changelogResults?: Map<string, ChangelogResult>
+  ): string {
     const allUpdates = fileUpdates.flatMap((file) => file.updates);
 
     if (allUpdates.length === 0) {
@@ -662,6 +669,45 @@ export class PullRequestManager {
       }
 
       sections.push('');
+    }
+
+    // Add changelog sections if provided (Requirement 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7)
+    if (changelogResults && changelogResults.size > 0) {
+      sections.push('## Changelogs');
+      sections.push('');
+
+      // Create a map of chart names to version info for formatting
+      const versionMap = new Map<string, { currentVersion: string; targetVersion: string }>();
+      
+      for (const update of allUpdates) {
+        const chartName = update.dependency.chartName;
+        if (!versionMap.has(chartName)) {
+          versionMap.set(chartName, {
+            currentVersion: update.currentVersion,
+            targetVersion: update.newVersion,
+          });
+        }
+      }
+
+      // Format each changelog
+      for (const [chartName, changelogResult] of changelogResults.entries()) {
+        const versionInfo = versionMap.get(chartName);
+        if (!versionInfo) {
+          continue;
+        }
+
+        const formatted = ChangelogFormatter.format({
+          chartName,
+          currentVersion: versionInfo.currentVersion,
+          targetVersion: versionInfo.targetVersion,
+          changelogResult,
+        });
+
+        sections.push(formatted);
+        sections.push('');
+        sections.push('---');
+        sections.push('');
+      }
     }
 
     // Add footer with helpful information

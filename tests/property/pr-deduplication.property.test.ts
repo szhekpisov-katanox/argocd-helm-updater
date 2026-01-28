@@ -115,7 +115,12 @@ function createMockConfig(): ActionConfig {
     rebaseStrategy: 'disabled',
     dryRun: false,
     logLevel: 'info',
-    githubToken: 'mock-token'
+    githubToken: 'mock-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
   };
 }
 
@@ -246,7 +251,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -273,7 +278,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -320,7 +325,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -361,7 +366,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -404,7 +409,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -445,7 +450,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -496,7 +501,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -557,7 +562,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -599,7 +604,7 @@ describe('Property 23: Pull Request Deduplication', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 

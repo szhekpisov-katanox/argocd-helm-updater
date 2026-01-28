@@ -44,6 +44,11 @@ function createTestConfig(
     dryRun: false,
     logLevel: 'info',
     githubToken: 'test-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
     ...overrides,
   };
 }

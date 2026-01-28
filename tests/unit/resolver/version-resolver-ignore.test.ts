@@ -47,6 +47,11 @@ describe('VersionResolver - Ignore Rules', () => {
       dryRun: false,
       logLevel: 'info',
       githubToken: 'test-token',
+      changelog: {
+        enabled: true,
+        maxLength: 5000,
+        cacheTTL: 3600,
+      },
     };
 
     // Mock axios instance

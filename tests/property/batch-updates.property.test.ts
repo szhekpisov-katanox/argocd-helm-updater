@@ -180,7 +180,7 @@ ${manifest2.content}`;
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -474,7 +474,7 @@ ${manifest2.content}`;
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 

@@ -47,6 +47,11 @@ const DEFAULTS: Omit<ActionConfig, 'githubToken'> = {
   rebaseStrategy: 'auto',
   dryRun: false,
   logLevel: 'info',
+  changelog: {
+    enabled: true,
+    maxLength: 5000,
+    cacheTTL: 3600,
+  },
 };
 
 /**
@@ -219,6 +224,22 @@ export class ConfigurationManager {
       merged.logLevel = external['log-level'];
     }
 
+    // Changelog configuration (Requirement 9.7)
+    if (external.changelog) {
+      merged.changelog = {
+        enabled: external.changelog.enabled ?? merged.changelog.enabled,
+        maxLength: external.changelog['max-length'] ?? merged.changelog.maxLength,
+        cacheTTL: external.changelog['cache-ttl'] ?? merged.changelog.cacheTTL,
+        gitlabToken: external.changelog['gitlab-token'] ?? merged.changelog.gitlabToken,
+        bitbucketCredentials: external.changelog['bitbucket-credentials']
+          ? {
+              username: external.changelog['bitbucket-credentials'].username,
+              password: external.changelog['bitbucket-credentials'].password,
+            }
+          : merged.changelog.bitbucketCredentials,
+      };
+    }
+
     return merged;
   }
 
@@ -376,6 +397,36 @@ export class ConfigurationManager {
 
     // GitHub token (required)
     result.githubToken = core.getInput('github-token', { required: true });
+
+    // Changelog configuration (Requirement 9.7)
+    const changelogEnabled = core.getInput('changelog-enabled');
+    if (changelogEnabled) {
+      result.changelog.enabled = changelogEnabled === 'true';
+    }
+
+    const changelogMaxLength = core.getInput('changelog-max-length');
+    if (changelogMaxLength) {
+      result.changelog.maxLength = parseInt(changelogMaxLength, 10);
+    }
+
+    const changelogCacheTTL = core.getInput('changelog-cache-ttl');
+    if (changelogCacheTTL) {
+      result.changelog.cacheTTL = parseInt(changelogCacheTTL, 10);
+    }
+
+    const gitlabToken = core.getInput('gitlab-token');
+    if (gitlabToken) {
+      result.changelog.gitlabToken = gitlabToken;
+    }
+
+    const bitbucketUsername = core.getInput('bitbucket-username');
+    const bitbucketPassword = core.getInput('bitbucket-password');
+    if (bitbucketUsername && bitbucketPassword) {
+      result.changelog.bitbucketCredentials = {
+        username: bitbucketUsername,
+        password: bitbucketPassword,
+      };
+    }
 
     return result;
   }
@@ -605,6 +656,22 @@ export class ConfigurationManager {
             );
           }
         }
+      }
+    }
+
+    // Validate changelog configuration (Requirement 9.7)
+    if (config.changelog.maxLength < 0) {
+      errors.push('changelog-max-length must be a non-negative number');
+    }
+
+    if (config.changelog.cacheTTL < 0) {
+      errors.push('changelog-cache-ttl must be a non-negative number');
+    }
+
+    // Validate Bitbucket credentials (both username and password required if one is provided)
+    if (config.changelog.bitbucketCredentials) {
+      if (!config.changelog.bitbucketCredentials.username || !config.changelog.bitbucketCredentials.password) {
+        errors.push('Both bitbucket-username and bitbucket-password must be provided together');
       }
     }
 

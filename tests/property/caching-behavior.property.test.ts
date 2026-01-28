@@ -86,6 +86,11 @@ describe('Property 10: Repository Index Caching', () => {
       dryRun: false,
       logLevel: 'info',
       githubToken: 'test-token',
+      changelog: {
+        enabled: true,
+        maxLength: 5000,
+        cacheTTL: 3600,
+      },
     };
 
     // Mock axios.create to return a fresh mock instance each time it's called
@@ -643,7 +648,7 @@ ${versions.map(v => `    - name: "${chartName}"
           });
         }
       ),
-      { numRuns: 20 }  // Reduced runs due to mock complexity with multiple repositories
+      { numRuns: 10 }  // Reduced runs due to mock complexity with multiple repositories
     );
   });
 

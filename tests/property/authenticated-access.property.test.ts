@@ -162,6 +162,11 @@ describe('Property 8: Authenticated Repository Access', () => {
       dryRun: false,
       logLevel: 'info',
       githubToken: 'test-token',
+      changelog: {
+        enabled: true,
+        maxLength: 5000,
+        cacheTTL: 3600,
+      },
     };
   }
 

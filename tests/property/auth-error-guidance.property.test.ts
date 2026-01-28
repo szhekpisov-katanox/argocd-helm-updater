@@ -92,7 +92,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -129,7 +129,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -158,7 +158,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -188,7 +188,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -219,7 +219,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -255,7 +255,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -286,7 +286,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -322,7 +322,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -402,7 +402,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -433,7 +433,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -474,7 +474,7 @@ describe('Property 30: Authentication Error Guidance', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

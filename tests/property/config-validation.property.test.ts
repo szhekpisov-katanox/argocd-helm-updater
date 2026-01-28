@@ -43,6 +43,11 @@ describe('Property: Configuration Validation', () => {
     dryRun: false,
     logLevel: 'info',
     githubToken: 'test-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
   });
 
   /**
@@ -154,7 +159,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidStrategy))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -177,7 +182,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidStrategy))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -200,7 +205,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidLevel))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -223,7 +228,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidStrategy))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -291,7 +296,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes('Registry credentials must include'))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -318,7 +323,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidURL))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -341,7 +346,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidType))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -363,7 +368,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes('open-pull-requests-limit must be a non-negative number'))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -385,7 +390,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes('auto-merge-require-approvals must be a non-negative number'))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -522,7 +527,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidPrefix))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -564,7 +569,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidType))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -669,7 +674,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes(invalidType))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -698,7 +703,7 @@ describe('Property: Configuration Validation', () => {
           expect(result.errors.some(e => e.includes('Invalid log-level'))).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 

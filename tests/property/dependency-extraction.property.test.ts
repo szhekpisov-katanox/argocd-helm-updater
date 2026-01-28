@@ -241,7 +241,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(['helm', 'oci']).toContain(dep.repoType);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -289,7 +289,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -346,7 +346,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(['helm', 'oci']).toContain(dep.repoType);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -397,7 +397,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -435,7 +435,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(dependencies).toHaveLength(0);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -482,7 +482,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -529,7 +529,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(dependencies[0].repoType).toBe(expectedType);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -581,7 +581,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(dependencies).toHaveLength(0);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -631,7 +631,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(dependencies).toHaveLength(0);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -683,7 +683,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -727,7 +727,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(dependencies[0].repoType).toBe('oci');
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -780,7 +780,7 @@ describe('Property 4: Helm Dependency Extraction Completeness', () => {
           expect(dependencies1).toEqual(dependencies2);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

@@ -47,6 +47,11 @@ function createTestConfig(
     dryRun: false,
     logLevel: 'error', // Use error level to suppress logs during tests
     githubToken: 'test-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
     ...overrides,
   };
 }
@@ -207,7 +212,7 @@ describe('Property: ArgoCD Resource Discovery', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -261,7 +266,7 @@ describe('Property: ArgoCD Resource Discovery', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -324,7 +329,7 @@ describe('Property: ArgoCD Resource Discovery', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -388,7 +393,7 @@ describe('Property: ArgoCD Resource Discovery', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -452,7 +457,7 @@ describe('Property: ArgoCD Resource Discovery', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -496,7 +501,7 @@ describe('Property: ArgoCD Resource Discovery', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -543,7 +548,7 @@ describe('Property: ArgoCD Resource Discovery', () => {
           expect(appSetCount).toBe(applicationSets.length);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 

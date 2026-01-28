@@ -92,6 +92,11 @@ describe('Property 9: Repository Fetch Error Resilience', () => {
       dryRun: false,
       logLevel: 'info',
       githubToken: 'test-token',
+      changelog: {
+        enabled: true,
+        maxLength: 5000,
+        cacheTTL: 3600,
+      },
     };
   });
 

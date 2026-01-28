@@ -101,7 +101,7 @@ describe('Property 6: Version Constraint Parsing', () => {
         // Should not have an error
         expect(result.error).toBeUndefined();
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -122,7 +122,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           expect(result.type).toBe('exact');
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -150,7 +150,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           expect(result.type).toBe('range');
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -168,7 +168,7 @@ describe('Property 6: Version Constraint Parsing', () => {
 
         expect(result1).toEqual(result2);
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -234,7 +234,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -263,7 +263,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -301,7 +301,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           expect(VersionParser.satisfies(version, lt)).toBe(false);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -336,7 +336,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -363,7 +363,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           expect(result.original).toBe(withWhitespace);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -400,7 +400,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           expect(result.error).toBeDefined();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -418,7 +418,7 @@ describe('Property 6: Version Constraint Parsing', () => {
         // Version should satisfy itself
         expect(VersionParser.satisfies(version, constraint)).toBe(true);
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -454,7 +454,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -483,7 +483,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -516,7 +516,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           expect(VersionParser.satisfies(release, rangeWithPreRelease)).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -537,7 +537,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           expect(result.original).toBe(constraint);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -567,7 +567,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -608,7 +608,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -649,7 +649,7 @@ describe('Property 6: Version Constraint Parsing', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

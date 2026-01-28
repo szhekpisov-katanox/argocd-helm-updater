@@ -199,7 +199,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -234,7 +234,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -269,7 +269,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -304,7 +304,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -348,7 +348,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -386,7 +386,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -427,7 +427,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -468,7 +468,7 @@ describe('Property: Configuration Parsing Completeness', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

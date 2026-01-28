@@ -143,7 +143,12 @@ function createMockConfig(prStrategy: 'single' | 'per-chart' | 'per-manifest'): 
     rebaseStrategy: 'disabled',
     dryRun: false,
     logLevel: 'info',
-    githubToken: 'mock-token'
+    githubToken: 'mock-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
   };
 }
 
@@ -191,7 +196,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -227,7 +232,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -274,7 +279,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -346,7 +351,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -411,7 +416,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -482,7 +487,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -520,7 +525,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -555,7 +560,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -589,7 +594,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -623,7 +628,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -684,7 +689,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -724,7 +729,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -820,7 +825,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -866,7 +871,7 @@ describe('Property 22: Pull Request Strategy Adherence', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

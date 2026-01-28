@@ -115,6 +115,22 @@ export declare class FileUpdater {
      */
     private getIndentation;
     /**
+     * Detects the indentation increment used in a YAML document
+     *
+     * This method analyzes the document to determine how many spaces are used
+     * for each level of indentation (typically 2 or 4 spaces).
+     *
+     * Strategy: Look at the differences between consecutive indentation levels
+     * to find the most common increment.
+     *
+     * @param lines - Array of file lines
+     * @param startLine - Start line of the document
+     * @param endLine - End line of the document
+     * @returns Number of spaces per indentation level (defaults to 2)
+     * @private
+     */
+    private detectIndentIncrement;
+    /**
      * Replaces the value on a YAML line while preserving formatting
      *
      * Handles various YAML value formats:

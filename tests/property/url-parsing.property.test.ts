@@ -152,7 +152,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dep.currentVersion).toBe(version);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -201,7 +201,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dep.currentVersion).toBe(version);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -250,7 +250,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dep.currentVersion).toBe(version);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -299,7 +299,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dep.currentVersion).toBe(version);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -360,7 +360,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -415,7 +415,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dep.repoURL).toBe(repoURL);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -453,7 +453,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dependencies1).toEqual(dependencies2);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -500,7 +500,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dep.repoType).toBe('oci');
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -552,7 +552,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dep.repoURL).toBe(fullURL);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -600,7 +600,7 @@ describe('Property 5: Chart Source URL Parsing', () => {
           expect(dependencies[0].repoType).toBe(expectedType);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

@@ -76,6 +76,11 @@ function createTestConfig(overrides: Partial<ActionConfig> = {}): ActionConfig {
     dryRun: true, // Default to dry-run for most tests
     logLevel: 'error', // Reduce noise in tests
     githubToken: 'test-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
     ...overrides,
   };
 }

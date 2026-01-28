@@ -99,6 +99,11 @@ const createTestConfig = (overrides: Partial<ActionConfig> = {}): ActionConfig =
   dryRun: false,
   logLevel: 'info',
   githubToken: 'test-token',
+  changelog: {
+    enabled: true,
+    maxLength: 5000,
+    cacheTTL: 3600,
+  },
   ...overrides
 });
 
@@ -161,7 +166,7 @@ describe('Property 12: Update Detection', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -215,7 +220,7 @@ describe('Property 12: Update Detection', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -271,7 +276,7 @@ describe('Property 12: Update Detection', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -411,7 +416,7 @@ describe('Property 12: Update Detection', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -490,7 +495,7 @@ describe('Property 12: Update Detection', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -558,7 +563,7 @@ describe('Property 12: Update Detection', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

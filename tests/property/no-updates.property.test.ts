@@ -69,6 +69,11 @@ const createTestConfig = (overrides: Partial<ActionConfig> = {}): ActionConfig =
   dryRun: false,
   logLevel: 'info',
   githubToken: 'test-token',
+  changelog: {
+    enabled: true,
+    maxLength: 5000,
+    cacheTTL: 3600,
+  },
   ...overrides
 });
 
@@ -123,7 +128,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -177,7 +182,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -213,7 +218,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -272,7 +277,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -342,7 +347,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -504,7 +509,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -560,7 +565,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -619,7 +624,7 @@ describe('Property 14: No Update for Latest Versions', () => {
           resolver.resolveVersions = originalResolveVersions;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

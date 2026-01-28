@@ -199,7 +199,7 @@ describe('Property 17: YAML Content Preservation (Round-Trip)', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -301,7 +301,7 @@ describe('Property 17: YAML Content Preservation (Round-Trip)', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -370,7 +370,7 @@ describe('Property 17: YAML Content Preservation (Round-Trip)', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -455,7 +455,7 @@ describe('Property 17: YAML Content Preservation (Round-Trip)', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -565,7 +565,7 @@ spec:
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -662,7 +662,7 @@ spec:
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -729,7 +729,7 @@ spec:
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

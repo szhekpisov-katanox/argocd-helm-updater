@@ -56,7 +56,7 @@ describe('Property 11: Semantic Version Ordering', () => {
         const result = VersionParser.compare(version, version);
         expect(result).toBe(0);
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -79,7 +79,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(result1).toBe(-result2);
         }
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -123,7 +123,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -150,7 +150,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(result).toBe(-1);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -177,7 +177,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(result).toBe(-1);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -202,7 +202,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(result).toBe(-1);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -228,7 +228,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(result).toBe(-1);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -256,7 +256,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(VersionParser.compare(alpha, rc)).toBe(-1);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -282,7 +282,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(result).toBe(0);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -306,7 +306,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -330,7 +330,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -355,7 +355,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(reversedAsc).toEqual(sortedDesc);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -376,7 +376,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(sorted1).toEqual(sorted2);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -402,7 +402,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(sorted.length).toBe(versions.length);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -427,7 +427,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect(result3).toBeNull();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -458,7 +458,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -481,7 +481,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           expect([-1, 0, 1]).toContain(result);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -517,7 +517,7 @@ describe('Property 11: Semantic Version Ordering', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

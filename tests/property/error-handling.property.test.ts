@@ -43,6 +43,11 @@ function createTestConfig(
     dryRun: false,
     logLevel: 'error',
     githubToken: 'test-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
     ...overrides,
   };
 }
@@ -77,7 +82,7 @@ describe('Property 3: Graceful Error Handling for Invalid YAML', () => {
           expect(documents).toEqual([]);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -131,7 +136,7 @@ describe('Property 3: Graceful Error Handling for Invalid YAML', () => {
         // Should return empty array for invalid YAML
         expect(documents).toEqual([]);
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

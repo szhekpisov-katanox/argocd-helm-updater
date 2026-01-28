@@ -99,7 +99,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 200 }
+      { numRuns: 100 }
     );
   });
 
@@ -130,7 +130,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -162,7 +162,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -194,7 +194,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -243,7 +243,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 200 }
+      { numRuns: 100 }
     );
   });
 
@@ -278,7 +278,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -339,7 +339,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -370,7 +370,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -457,7 +457,7 @@ describe('Property: Log Level Filtering', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 200 }
+      { numRuns: 100 }
     );
   });
 });

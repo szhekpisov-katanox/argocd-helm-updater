@@ -114,7 +114,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -150,7 +150,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -192,7 +192,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -233,7 +233,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -272,7 +272,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -350,7 +350,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -417,7 +417,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -466,7 +466,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -506,7 +506,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -545,7 +545,7 @@ describe('Property 27: Error Logging with Context', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

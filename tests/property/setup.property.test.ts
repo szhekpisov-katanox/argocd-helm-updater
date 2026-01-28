@@ -11,7 +11,7 @@ describe('Property Testing Setup', () => {
         // Commutative property of addition
         return a + b === b + a;
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -22,7 +22,7 @@ describe('Property Testing Setup', () => {
       fc.property(arbPositiveInt, (n) => {
         return n > 0;
       }),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

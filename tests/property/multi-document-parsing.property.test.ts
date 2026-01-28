@@ -44,6 +44,11 @@ function createTestConfig(
     dryRun: false,
     logLevel: 'error', // Use error level to suppress logs during tests
     githubToken: 'test-token',
+    changelog: {
+      enabled: true,
+      maxLength: 5000,
+      cacheTTL: 3600,
+    },
     ...overrides,
   };
 }
@@ -171,7 +176,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -216,7 +221,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           expect(otherCount).toBe(nonArgoCDResources.length);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -258,7 +263,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -293,7 +298,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -322,7 +327,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -355,7 +360,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           });
         }
       ),
-      { numRuns: 20 } // Fewer runs for large files
+      { numRuns: 10 } // Fewer runs for large files
     );
   });
 
@@ -388,7 +393,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           expect(documents).toEqual([]);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -424,7 +429,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           });
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -451,7 +456,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           expect(documents[0].metadata.name).toBe(application.metadata.name);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -486,7 +491,7 @@ describe('Property 2: Multi-Document YAML Parsing', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

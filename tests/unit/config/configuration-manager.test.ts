@@ -292,6 +292,11 @@ pr-labels:
         dryRun: false,
         logLevel: 'info',
         githubToken: 'test-token',
+        changelog: {
+          enabled: true,
+          maxLength: 5000,
+          cacheTTL: 3600,
+        },
       };
     });
 
@@ -700,6 +705,94 @@ pr-labels:
       expect(result.valid).toBe(false);
       expect(result.errors.some(e => e.includes('contains empty pattern'))).toBe(true);
     });
+
+    // Changelog configuration validation tests (Requirement 9.7)
+    it('should validate changelog configuration with defaults', () => {
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(true);
+      expect(validConfig.changelog.enabled).toBe(true);
+      expect(validConfig.changelog.maxLength).toBe(5000);
+      expect(validConfig.changelog.cacheTTL).toBe(3600);
+    });
+
+    it('should reject negative changelog max length', () => {
+      validConfig.changelog.maxLength = -1;
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.includes('changelog-max-length must be a non-negative number'))).toBe(true);
+    });
+
+    it('should reject negative changelog cache TTL', () => {
+      validConfig.changelog.cacheTTL = -1;
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.includes('changelog-cache-ttl must be a non-negative number'))).toBe(true);
+    });
+
+    it('should accept zero values for changelog configuration', () => {
+      validConfig.changelog.maxLength = 0;
+      validConfig.changelog.cacheTTL = 0;
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(true);
+    });
+
+    it('should accept changelog configuration with GitLab token', () => {
+      validConfig.changelog.gitlabToken = 'gitlab-token-123';
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(true);
+    });
+
+    it('should accept changelog configuration with Bitbucket credentials', () => {
+      validConfig.changelog.bitbucketCredentials = {
+        username: 'bitbucket-user',
+        password: 'bitbucket-pass',
+      };
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(true);
+    });
+
+    it('should reject incomplete Bitbucket credentials (username only)', () => {
+      validConfig.changelog.bitbucketCredentials = {
+        username: 'bitbucket-user',
+        password: '',
+      };
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.includes('Both bitbucket-username and bitbucket-password must be provided together'))).toBe(true);
+    });
+
+    it('should reject incomplete Bitbucket credentials (password only)', () => {
+      validConfig.changelog.bitbucketCredentials = {
+        username: '',
+        password: 'bitbucket-pass',
+      };
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.includes('Both bitbucket-username and bitbucket-password must be provided together'))).toBe(true);
+    });
+
+    it('should accept changelog disabled configuration', () => {
+      validConfig.changelog.enabled = false;
+
+      const result = ConfigurationManager.validate(validConfig);
+
+      expect(result.valid).toBe(true);
+    });
   });
 
   describe('edge cases', () => {
@@ -774,6 +867,42 @@ pr-labels:
       const config = ConfigurationManager.load();
 
       expect(config.prLabels).toEqual(['label1', 'label2', 'label3']);
+    });
+
+    it('should use default changelog values when inputs not provided', () => {
+      const config = ConfigurationManager.load();
+
+      expect(config.changelog.enabled).toBe(true);
+      expect(config.changelog.maxLength).toBe(5000);
+      expect(config.changelog.cacheTTL).toBe(3600);
+      expect(config.changelog.gitlabToken).toBeUndefined();
+      expect(config.changelog.bitbucketCredentials).toBeUndefined();
+    });
+
+    it('should load changelog configuration from action inputs', () => {
+      mockCore.getInput.mockImplementation((name: string) => {
+        const inputs: Record<string, string> = {
+          'github-token': 'test-token',
+          'changelog-enabled': 'false',
+          'changelog-max-length': '10000',
+          'changelog-cache-ttl': '7200',
+          'gitlab-token': 'gitlab-token-123',
+          'bitbucket-username': 'bb-user',
+          'bitbucket-password': 'bb-pass',
+        };
+        return inputs[name] || '';
+      });
+
+      const config = ConfigurationManager.load();
+
+      expect(config.changelog.enabled).toBe(false);
+      expect(config.changelog.maxLength).toBe(10000);
+      expect(config.changelog.cacheTTL).toBe(7200);
+      expect(config.changelog.gitlabToken).toBe('gitlab-token-123');
+      expect(config.changelog.bitbucketCredentials).toEqual({
+        username: 'bb-user',
+        password: 'bb-pass',
+      });
     });
   });
 });

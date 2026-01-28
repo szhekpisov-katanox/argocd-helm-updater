@@ -127,6 +127,24 @@ export interface ActionConfig {
   // GitHub token
   /** GitHub token for API access */
   githubToken: string;
+
+  // Changelog generation configuration
+  /** Changelog generation configuration */
+  changelog: {
+    /** Enable changelog generation (default: true) */
+    enabled: boolean;
+    /** Maximum changelog length in PR body (default: 5000) */
+    maxLength: number;
+    /** Cache TTL in seconds (default: 3600) */
+    cacheTTL: number;
+    /** GitLab token for private GitLab repositories */
+    gitlabToken?: string;
+    /** Bitbucket credentials for private Bitbucket repositories */
+    bitbucketCredentials?: {
+      username: string;
+      password: string;
+    };
+  };
 }
 
 /**
@@ -159,6 +177,16 @@ export interface ExternalConfig {
   'rebase-strategy'?: 'auto' | 'disabled';
   'dry-run'?: boolean;
   'log-level'?: 'debug' | 'info' | 'warn' | 'error';
+  changelog?: {
+    enabled?: boolean;
+    'max-length'?: number;
+    'cache-ttl'?: number;
+    'gitlab-token'?: string;
+    'bitbucket-credentials'?: {
+      username: string;
+      password: string;
+    };
+  };
 }
 
 /**

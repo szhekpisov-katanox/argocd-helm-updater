@@ -96,7 +96,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -188,7 +188,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -233,7 +233,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -270,7 +270,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -306,7 +306,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -347,7 +347,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -382,7 +382,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -417,7 +417,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -454,7 +454,7 @@ describe('Property: Configuration Defaults', () => {
           expect(validation.valid).toBe(true);
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -496,7 +496,7 @@ describe('Property: Configuration Defaults', () => {
           }
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });

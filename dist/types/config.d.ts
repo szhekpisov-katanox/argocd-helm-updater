@@ -100,6 +100,22 @@ export interface ActionConfig {
     logLevel: 'debug' | 'info' | 'warn' | 'error';
     /** GitHub token for API access */
     githubToken: string;
+    /** Changelog generation configuration */
+    changelog: {
+        /** Enable changelog generation (default: true) */
+        enabled: boolean;
+        /** Maximum changelog length in PR body (default: 5000) */
+        maxLength: number;
+        /** Cache TTL in seconds (default: 3600) */
+        cacheTTL: number;
+        /** GitLab token for private GitLab repositories */
+        gitlabToken?: string;
+        /** Bitbucket credentials for private Bitbucket repositories */
+        bitbucketCredentials?: {
+            username: string;
+            password: string;
+        };
+    };
 }
 /**
  * External configuration file structure (.argocd-updater.yml)

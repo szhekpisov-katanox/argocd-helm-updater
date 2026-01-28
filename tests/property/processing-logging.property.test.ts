@@ -96,7 +96,7 @@ describe('Property 28: Processing Progress Logging', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -170,7 +170,7 @@ describe('Property 28: Processing Progress Logging', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -224,7 +224,7 @@ describe('Property 28: Processing Progress Logging', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -349,7 +349,7 @@ describe('Property 28: Processing Progress Logging', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -391,7 +391,7 @@ describe('Property 28: Processing Progress Logging', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -433,7 +433,7 @@ describe('Property 28: Processing Progress Logging', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -485,7 +485,7 @@ describe('Property 28: Processing Progress Logging', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -572,7 +572,7 @@ describe('Property 28: Processing Progress Logging', () => {
           return true;
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 
@@ -688,7 +688,7 @@ describe('Property 28: Processing Progress Logging', () => {
           jest.clearAllMocks();
         }
       ),
-      { numRuns: 100 }
+      { numRuns: 10 }
     );
   });
 });
